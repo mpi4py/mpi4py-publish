@@ -1,0 +1,400 @@
+name: cd-wheel
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    inputs:
+      repository:
+        description: 'mpi4py repository'
+        default: mpi4py/mpi4py
+        required: false
+        type: string
+      ref:
+        description: 'mpi4py ref'
+        default: ''
+        required: false
+        type: string
+      os-arch:
+        description: 'Target OS-Architecture'
+        default: ''
+        required: false
+        type: string
+      python-tag:
+        description: "CPython/PyPy tag ({cp,pp}3{7..12})"
+        default: ''
+        required: false
+        type: string
+      skip-tag:
+        description: "Skip build tags"
+        default: ''
+        required: false
+        type: string
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: 'mpi4py repository'
+        default: mpi4py/mpi4py
+        required: true
+        type: string
+      ref:
+        description: 'mpi4py ref'
+        default: ''
+        required: false
+        type: string
+      os-arch:
+        description: "Target OS-Architecture"
+        default: Linux-x86_64
+        required: true
+        type: choice
+        options:
+          - Linux
+          - Linux-x86_64
+          - Linux-aarch64
+          - Linux-ppc64le
+          - macOS
+          - macOS-x86_64
+          - macOS-arm64
+          - Windows
+          - Windows-AMD64
+      python-tag:
+        description: "CPython/PyPy tag ({cp,pp}3{7..12})"
+        default: ''
+        required: false
+        type: string
+      skip-tag:
+        description: "Skip build tags"
+        default: ''
+        required: false
+        type: string
+
+jobs:
+
+  setup:
+    runs-on: 'ubuntu-latest'
+    outputs:
+      matrix-build: ${{ steps.setup.outputs.matrix-build }}
+      matrix-merge: ${{ steps.setup.outputs.matrix-merge }}
+      os-arch-list: ${{ steps.setup.outputs.os-arch-list }}
+    steps:
+    - uses: actions/checkout@v4
+    - id: setup
+      run: |
+        # build matrix
+        python -u .cibw/setup-build.py \
+          --os ${{ inputs.os-arch }} \
+          --py ${{ inputs.python-tag }} \
+          >> "$GITHUB_OUTPUT"
+
+  build:
+    if: ${{ needs.setup.outputs.matrix-build != '[]' }}
+    needs: setup
+    runs-on: ${{ (matrix.os == 'Linux'   && 'ubuntu-latest') ||
+                 (matrix.os == 'macOS'   && 'macos-11'     ) ||
+                 (matrix.os == 'Windows' && 'windows-2019' ) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.setup.outputs.matrix-build) }}
+
+    steps:
+
+    - id: checkout
+      uses: actions/checkout@v4
+
+    - id: checkout-project
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ inputs.repository || 'mpi4py/mpi4py' }}
+        ref: ${{ inputs.ref }}
+        path: mpi4py.git
+
+    - id: setup-python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3
+
+    - id: setup-cython
+      run: python -m pip install -r ./conf/requirements-build-cython.txt
+      working-directory: mpi4py.git
+
+    - id: setup-project
+      run: python ./conf/cythonize.py
+      working-directory: mpi4py.git
+
+    - id: source-date-epoch
+      run: |
+        SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)
+        echo SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH >> $GITHUB_ENV
+        echo $(git log -1 --pretty=%ci) [timestamp=$SOURCE_DATE_EPOCH]
+      shell: bash
+      working-directory: mpi4py.git
+
+    - id: setup-qemu
+      if: ${{ runner.os == 'Linux' }}
+      uses: docker/setup-qemu-action@v2
+      with:
+        platforms: all
+
+    - id: build
+      uses: pypa/cibuildwheel@v2.15.0
+      timeout-minutes: 30
+      with:
+        package-dir: mpi4py.git
+        output-dir:  wheelhouse
+      env:
+        MPI4PY_LOCAL_VERSION: "${{ matrix.mpi-abi }}"
+        CIBW_PROJECT_REQUIRES_PYTHON: ">=3.6"
+        CIBW_BUILD_FRONTEND: "build"
+        CIBW_BUILD: "${{ matrix.py || '*' }}-*"
+        CIBW_SKIP:  "${{ inputs.skip-tag }} *musllinux*"
+        CIBW_ARCHS: "${{ matrix.arch }}"
+        CIBW_BEFORE_ALL: >-
+          bash {project}/.cibw/install-mpi.sh
+          "${{ matrix.mpi-abi }}" "${{ matrix.arch }}"
+        CIBW_BEFORE_BUILD: >-
+          bash {project}/.cibw/patch-tools.sh
+        CIBW_TEST_COMMAND: >-
+          bash {project}/.cibw/run-tests.sh
+        CIBW_TEST_SKIP: "*-macosx_arm64"
+        CIBW_ENVIRONMENT_PASS_LINUX: >-
+          MPI4PY_LOCAL_VERSION
+          MPI4PY_DIST_SUFFIX
+          SOURCE_DATE_EPOCH
+        CIBW_ENVIRONMENT_LINUX: >-
+          CFLAGS="-g0 -O"
+        CIBW_ENVIRONMENT_MACOS: >-
+          CFLAGS="-g0 -O"
+          LDFLAGS="-Wl,-headerpad_max_install_names"
+          LDFLAGS="$LDFLAGS -Wl,-rpath,/usr/local/lib"
+          LDFLAGS="$LDFLAGS -Wl,-rpath,/opt/homebrew/lib"
+          LDFLAGS="$LDFLAGS -Wl,-rpath,/opt/local/lib"
+        CIBW_ENVIRONMENT_WINDOWS: >-
+          I_MPI_ROOT="$USERPROFILE\\mpi\\Library"
+          MSMPI_ROOT="$USERPROFILE\\mpi\\Library"
+          MSMPI_BIN="$MSMPI_ROOT\\bin"
+          MSMPI_INC="$MSMPI_ROOT\\include"
+          MSMPI_LIB64="$MSMPI_ROOT\\lib"
+        CIBW_BEFORE_BUILD_WINDOWS:
+
+    - id: check
+      run: .cibw/check-wheels.sh wheelhouse
+      shell: bash
+
+    - id: upload
+      uses: actions/upload-artifact@v3
+      with:
+        name: build-${{ runner.os }}-${{ matrix.arch }}
+        path: wheelhouse/*.whl
+
+  merge:
+    if: ${{ needs.setup.outputs.matrix-merge != '[]' }}
+    needs: [setup, build]
+    runs-on: ${{ (matrix.os == 'Linux'   && 'ubuntu-latest'  ) ||
+                 (matrix.os == 'macOS'   && 'macos-latest'   ) ||
+                 (matrix.os == 'Windows' && 'windows-latest' ) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.setup.outputs.matrix-merge) }}
+
+    steps:
+
+    - id: checkout
+      uses: actions/checkout@v4
+
+    - id: checkout-project
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ inputs.repository || 'mpi4py/mpi4py' }}
+        ref: ${{ inputs.ref }}
+        path: mpi4py.git
+
+    - id: source-date-epoch
+      run: |
+        SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)
+        echo SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH >> $GITHUB_ENV
+        echo $(git log -1 --pretty=%ci) [timestamp=$SOURCE_DATE_EPOCH]
+      shell: bash
+      working-directory: mpi4py.git
+
+    - id: setup-python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3
+
+    - id: install
+      run: python -m pip install -U wheel
+
+    - id: download
+      uses: actions/download-artifact@v3
+      with:
+        name: build-${{ runner.os }}-${{ matrix.arch }}
+        path: wheelhouse
+
+    - id: merge
+      run: python .cibw/merge-wheels.py wheelhouse dist
+
+    - id: sha256sum
+      run: |
+        # sha256sum
+        test $(uname) == Darwin && sha256sum() { shasum -a 256 $@; } || true
+        echo '```'         >> $GITHUB_STEP_SUMMARY
+        sha256sum -b *.whl >> $GITHUB_STEP_SUMMARY
+        echo '```'         >> $GITHUB_STEP_SUMMARY
+      shell: bash
+      working-directory: dist
+
+    - id: upload
+      uses: actions/upload-artifact@v3
+      with:
+        name: wheel-${{ runner.os }}
+        path: dist/*.whl
+
+  test-setup:
+    needs: [setup, merge]
+    runs-on: 'ubuntu-latest'
+    outputs:
+      matrix-test-cf: ${{ steps.setup.outputs.matrix-test-cf }}
+      matrix-test-gh: ${{ steps.setup.outputs.matrix-test-gh }}
+    steps:
+    - uses: actions/checkout@v4
+    - if: ${{ contains(needs.setup.outputs.os-arch-list, '"Linux-x86_64"') }}
+      uses: actions/download-artifact@v3
+      with:
+        name: build-Linux-x86_64
+        path: wheelhouse
+    - if: ${{ contains(needs.setup.outputs.os-arch-list, '"macOS-x86_64"') }}
+      uses: actions/download-artifact@v3
+      with:
+        name: build-macOS-x86_64
+        path: wheelhouse
+    - if: ${{ contains(needs.setup.outputs.os-arch-list, '"Windows-AMD64"') }}
+      uses: actions/download-artifact@v3
+      with:
+        name: build-Windows-AMD64
+        path: wheelhouse
+    - id: setup
+      run: python -u .cibw/setup-test.py wheelhouse >> "$GITHUB_OUTPUT"
+
+  test-cf:
+    if: ${{ needs.test-setup.outputs.matrix-test-cf != '[]' }}
+    needs: test-setup
+    runs-on: ${{ (matrix.os == 'Linux'   && 'ubuntu-latest' ) ||
+                 (matrix.os == 'macOS'   && 'macos-latest'  ) ||
+                 (matrix.os == 'Windows' && 'windows-latest') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.test-setup.outputs.matrix-test-cf) }}
+
+    defaults:
+      run:
+        shell: bash -el {0}
+
+    steps:
+
+    - uses: actions/checkout@v4
+
+    - uses: mamba-org/setup-micromamba@v1
+      with:
+        init-shell: bash
+        post-cleanup: none
+        environment-name: test
+        create-args: >-
+          ${{ matrix.mpi }}=${{ matrix.mpi-version }}
+          python=${{ matrix.py }}
+          pip
+        condarc: |
+          show_channel_urls: true
+          channel_priority: >-
+            ${{ matrix.mpi == 'impi_rt' && 'flexible' || 'strict' }}
+          channels:
+            - conda-forge
+            - ${{ matrix.mpi == 'impi_rt' && 'intel' || 'nodefaults' }}
+            - nodefaults
+
+    - run: |
+        # Tweak MPI runtime
+        case $(uname)-${{ matrix.mpi }} in
+        Linux-*)
+          ;;
+        Darwin-*)
+          ;;
+        *NT*-impi_rt)
+          I_MPI_ROOT=$(cygpath -w "$CONDA_PREFIX/Library")
+          echo "I_MPI_ROOT=$I_MPI_ROOT"      >> $GITHUB_ENV
+          echo "$I_MPI_ROOT\\bin"            >> $GITHUB_PATH
+          echo "$I_MPI_ROOT\\bin\\libfabric" >> $GITHUB_PATH
+          ;;
+        *NT*-msmpi)
+          MSMPI_ROOT=$(cygpath -w "$CONDA_PREFIX/Library")
+          echo "MSMPI_BIN=$MSMPI_ROOT\\bin"     >> $GITHUB_ENV
+          echo "MSMPI_INC=$MSMPI_ROOT\\include" >> $GITHUB_ENV
+          echo "MSMPI_LIB64=$MSMPI_ROOT\\lib"   >> $GITHUB_ENV
+          echo "$MSMPI_BIN"                     >> $GITHUB_PATH
+          ;;
+        esac
+
+    - uses: actions/download-artifact@v3
+      with:
+        name: wheel-${{ runner.os }}
+        path: dist
+
+    - run: python -m pip install mpi4py --no-index --find-links=dist
+
+    - uses: ./.github/actions/mpi4py-test-basic
+      timeout-minutes: 2
+      with:
+        shell: bash -el {0}
+
+    - if: ${{ matrix.mpi == 'mpich' || matrix.mpi == 'openmpi' }}
+      uses: ./.github/actions/mpi4py-test-basic
+      timeout-minutes: 2
+      env:
+        MPI4PY_MPIABI: mpi31-${{ matrix.mpi }}
+      with:
+        shell: bash -el {0}
+
+  test-gh:
+    if: ${{ needs.test-setup.outputs.matrix-test-gh != '[]' }}
+    needs: test-setup
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.test-setup.outputs.matrix-test-gh) }}
+
+    steps:
+
+    - uses: actions/checkout@v4
+
+    - uses: mpi4py/setup-mpi@v1
+      with:
+        mpi: ${{ matrix.mpi }}
+
+    - if: ${{ matrix.mpi == 'mpich' && runner.os == 'Linux' }}
+      run: cd /usr/lib/$(gcc -print-multiarch) && sudo ln -s libmpi{ch,}.so.12
+
+    - uses:  actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.py }}
+
+    - run: python -m pip install --upgrade pip
+
+    - uses: actions/download-artifact@v3
+      with:
+        name: wheel-${{ runner.os }}
+        path: dist
+
+    - run: python -m pip install mpi4py --no-index --find-links=dist
+
+    - uses: ./.github/actions/mpi4py-test-basic
+      timeout-minutes: 2
+
+    - if: ${{ matrix.mpi == 'mpich' || matrix.mpi == 'openmpi' }}
+      uses: ./.github/actions/mpi4py-test-basic
+      timeout-minutes: 2
+      env:
+        MPI4PY_MPIABI: mpi31-${{ matrix.mpi }}

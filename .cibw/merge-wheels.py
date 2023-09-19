@@ -1,0 +1,149 @@
+#!/usr/bin/env python
+import argparse
+import collections
+import os
+import shutil
+import tempfile
+import textwrap
+from pathlib import Path
+
+from wheel.cli import pack as wheel_pack
+from wheel.wheelfile import WheelFile
+
+
+def zip_extract(zfile, zinfo, destination):
+    zfile.extract(zinfo, destination)
+    # https://github.com/python/cpython/issues/59999
+    permissions = zinfo.external_attr >> 16 & 0o777
+    destination.joinpath(zinfo.filename).chmod(permissions)
+
+
+def wheel_tagline(tags: list[str]) -> str:
+    impls = sorted({tag.split("-")[0] for tag in tags})
+    abivers = sorted({tag.split("-")[1] for tag in tags})
+    platforms = sorted({tag.split("-")[2] for tag in tags})
+    platforms = [tag.split("-")[2] for tag in tags]
+    return "-".join([".".join(impls), ".".join(abivers), ".".join(platforms)])
+
+
+wheel_pack.compute_tagline = wheel_tagline
+
+parser = argparse.ArgumentParser()
+parser.add_argument("wheelhouse", nargs="?", default="wheelhouse")
+parser.add_argument("output_dir", nargs="?", default="dist")
+opts = parser.parse_args()
+
+wheelhouse = Path(opts.wheelhouse)
+output_dir = Path(opts.output_dir)
+working_dir = Path(tempfile.mkdtemp())
+ext_suffix = ".so" if os.name == "posix" else ".pyd"
+ext_name = "MPI"
+
+shutil.rmtree(output_dir, ignore_errors=True)
+output_dir.mkdir(parents=True, exist_ok=True)
+
+wheels = collections.defaultdict(list)
+for whl in sorted(wheelhouse.glob("*.whl")):
+    dist, version, py, abi, plat = whl.stem.split("-")
+    if "+" in version:  # local version
+        package = dist
+        version, sep, variant = version.partition("+")
+        variant = sep + variant
+    else:  # dist suffix
+        package, sep, variant = dist.partition("_")
+        variant = sep + variant
+    wheels[(package, version, (py, abi, plat))].append(variant)
+
+for (package, version, tags), variantlist in wheels.items():
+    namever = f"{package}-{version}"
+    wheeltags = "-".join(tags)
+    root_dir = working_dir / namever
+    package_dir = root_dir / package
+    distinfo_dir = root_dir / f"{namever}.dist-info"
+
+    variant_registry = []
+    for i, variant in enumerate(sorted(variantlist)):
+        if variant[0] == "+":  # local version
+            dist = f"{package}"
+            distver = f"{dist}-{version}{variant}"
+        if variant[0] == "_":  # dist suffix
+            dist = f"{package}{variant}"
+            distver = f"{dist}-{version}"
+
+        wheelname = f"{distver}-{wheeltags}.whl"
+        wheelpath = wheelhouse / wheelname
+
+        if i == 0:
+            with WheelFile(wheelpath) as wf:
+                print(
+                    f"Unpacking wheel {wheelpath} ...",
+                    end="", flush=True,
+                )
+                for zinfo in wf.filelist:
+                    zip_extract(wf, zinfo, root_dir)
+                print("OK", flush=True)
+
+            distinfo_dir.with_stem(distver).rename(distinfo_dir)
+
+            for extmod in package_dir.glob(f"{ext_name}.*{ext_suffix}"):
+                extmod.unlink()
+            for libdir in (
+                Path(dist).with_suffix(".libs"),
+                Path(package).with_suffix(".libs"),
+                Path(package) / ".libs",
+            ):
+                libdir = root_dir / libdir
+                if libdir.exists():
+                    libdir.rmdir()
+
+            record = distinfo_dir / "RECORD"
+            record.unlink()
+
+            metadata = distinfo_dir / "METADATA"
+            data = metadata.read_text(encoding="utf-8")
+            data = data.replace(variant.replace("_", "-"), "")
+            data = data.replace(variant, "")
+            metadata.write_text(data, encoding="utf-8")
+
+            pkgdata = package_dir / "mpi.cfg"
+            pkgdata.write_text("[mpi]\n", encoding="utf-8")
+
+        transtb = str.maketrans("_.", "--")
+        variant = variant[1:].translate(transtb)
+        variant_registry.append(variant)
+        with WheelFile(wheelpath) as wf:
+            for zinfo in wf.filelist:
+                member = Path(zinfo.filename)
+                if member.match(f"{package}/{ext_name}.*{ext_suffix}"):
+                    print(
+                        f"Extracting: {member} [{variant}]...",
+                        end="", flush=True,
+                    )
+                    zip_extract(wf, zinfo, root_dir)
+                    extension = root_dir.joinpath(member)
+                    extname, suffix = extension.name.split(".", 1)
+                    filename = f"{extname}.{variant}.{suffix}"
+                    extension.rename(extension.parent / filename)
+                    print("OK", flush=True)
+
+    source = Path(__file__).parent / "mpi4py_mpiabi.py"
+    pycode = source.read_text(encoding="utf-8")
+    source = package_dir / "_mpiabi.py"
+    source.write_text(pycode, encoding="utf-8")
+
+    source = package_dir / "__init__.py"
+    with source.open("a", encoding="utf-8") as fh:
+        fh.write(textwrap.dedent("""\n
+        # Install MPI ABI finder
+        from . import _mpiabi  # noqa: E402
+        _mpiabi._install_finder()
+        """))
+        if variant_registry:
+            fh.write("# Register MPI ABI variants\n")
+        for variant in variant_registry:
+            fh.write(f"_mpiabi._register({variant!r})\n")
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    wheel_pack.pack(root_dir, output_dir, None)
+    shutil.rmtree(working_dir, ignore_errors=True)
+    print("", flush=True)

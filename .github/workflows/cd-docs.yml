@@ -1,0 +1,87 @@
+name: cd-docs
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    inputs:
+      repository:
+        description: 'mpi4py repository'
+        default: mpi4py/mpi4py
+        required: false
+        type: string
+      ref:
+        description: 'mpi4py ref'
+        default: ''
+        required: false
+        type: string
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: 'mpi4py repository'
+        default: mpi4py/mpi4py
+        required: true
+        type: string
+      ref:
+        description: 'mpi4py ref'
+        default: ''
+        required: false
+        type: string
+
+jobs:
+
+  docs:
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Install LaTeX
+      run:  |
+        # Install LaTeX
+        sudo apt update && \
+        sudo apt install -y \
+           texlive-latex-base \
+           texlive-latex-recommended \
+           texlive-latex-extra \
+           latexmk \
+           texinfo
+
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ inputs.repository || 'mpi4py/mpi4py' }}
+        ref: ${{ inputs.ref }}
+
+    - name: Set SOURCE_DATE_EPOCH
+      run:  |
+        SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)
+        echo SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH >> $GITHUB_ENV
+        echo $(git log -1 --pretty=%ci) [timestamp=$SOURCE_DATE_EPOCH]
+      shell: bash
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3
+
+    - name: Upgrade pip
+      run:  python -m pip install -U pip
+
+    - name: Install tox
+      run:  python -m pip install -U tox
+
+    - name: Build documentation
+      run:  python -m tox run -m docs
+
+    - name: Archive documentation
+      run:  |
+        ZIP=mpi4py-docs.zip
+        ln -s docs ${ZIP%.zip}
+        python -m zipfile -c $ZIP ${ZIP%.zip}
+
+    - name: Upload documentation
+      uses: actions/upload-artifact@v3
+      with:
+        name: docs
+        path: mpi4py-docs.zip

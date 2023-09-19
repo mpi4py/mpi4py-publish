@@ -1,0 +1,126 @@
+name: cd
+
+permissions:
+  contents: read
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: 'mpi4py repository'
+        default: mpi4py/mpi4py
+        required: true
+        type: string
+      ref:
+        description: 'mpi4py ref'
+        default: ''
+        required: false
+        type: string
+      publish-anaconda:
+        description: "Publish to Anaconda"
+        default: False
+        type: boolean
+
+jobs:
+
+  docs:
+    uses: ./.github/workflows/cd-docs.yml
+    with:
+      repository: ${{ inputs.repository }}
+      ref: ${{ inputs.ref }}
+
+  sdist:
+    uses: ./.github/workflows/cd-sdist.yml
+    with:
+      repository: ${{ inputs.repository }}
+      ref: ${{ inputs.ref }}
+
+  wheel-Linux:
+    uses: ./.github/workflows/cd-wheel.yml
+    with:
+      repository: ${{ inputs.repository }}
+      ref: ${{ inputs.ref }}
+      os-arch: Linux
+
+  wheel-macOS:
+    uses: ./.github/workflows/cd-wheel.yml
+    with:
+      repository: ${{ inputs.repository }}
+      ref: ${{ inputs.ref }}
+      os-arch: macOS
+
+  wheel-Windows:
+    uses: ./.github/workflows/cd-wheel.yml
+    with:
+      repository: ${{ inputs.repository }}
+      ref: ${{ inputs.ref }}
+      os-arch: Windows
+
+  publish-anaconda:
+    if: |
+      inputs.publish-anaconda ||
+      github.event_name == 'schedule'
+    needs:
+      - sdist
+      - wheel-Linux
+      - wheel-macOS
+      - wheel-Windows
+    runs-on: ubuntu-latest
+    environment:
+      name: anaconda
+      url:  https://anaconda.org/mpi4py/repo
+
+    steps:
+
+    - name: Download sdist artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: sdist
+        path: dist
+
+    - name: Download wheel artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: wheel-Linux
+        path: dist
+
+    - name: Download wheel artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: wheel-macOS
+        path: dist
+
+    - name: Download wheel artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: wheel-Windows
+        path: dist
+
+    - name: Report sha256sum
+      run:  |
+        # Report sha256sum
+        echo '```'            >> $GITHUB_STEP_SUMMARY
+        sha256sum -b *.tar.gz >> $GITHUB_STEP_SUMMARY
+        sha256sum -b *.whl    >> $GITHUB_STEP_SUMMARY
+        echo '```'            >> $GITHUB_STEP_SUMMARY
+      shell: bash
+      working-directory: dist
+
+    - name: Setup Micromamba
+      uses: mamba-org/setup-micromamba@v1
+      with:
+        environment-name: ac
+        create-args: anaconda-client
+
+    - name: Publish to Anaconda
+      run:  |
+        # https://pypi.anaconda.org/mpi4py/simple
+        anaconda --token "$ANACONDA_TOKEN" \
+        upload --user "$ANACONDA_USER" --force \
+        dist/*.tar.gz dist/*.whl
+      env:
+        ANACONDA_USER:  mpi4py
+        ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
+      shell: bash -el {0}

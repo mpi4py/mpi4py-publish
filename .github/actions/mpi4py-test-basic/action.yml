@@ -1,0 +1,38 @@
+---
+name: 'mpi4py-test-basic'
+description: 'Run basic mpi4py tests.'
+author: 'Lisandro Dalcin'
+
+inputs:
+  shell:
+    description: "shell"
+    required: false
+    default: 'bash'
+
+runs:
+  using: 'composite'
+  steps:
+
+  - name:  Test mpi4py prefix
+    run:   python -m mpi4py --prefix
+    shell: ${{ inputs.shell }}
+
+  - name:  Test mpi4py version
+    run:   python -m mpi4py --version
+    shell: ${{ inputs.shell }}
+
+  - name:  Test mpi4py MPI standard version
+    run:   python -m mpi4py --mpi-std-version
+    shell: ${{ inputs.shell }}
+
+  - name:  Test mpi4py MPI library version
+    run:   python -m mpi4py --mpi-lib-version
+    shell: ${{ inputs.shell }}
+
+  - name:  Test mpi4py helloworld
+    run:   mpiexec -n 2 python -m mpi4py.bench helloworld
+    shell: ${{ inputs.shell }}
+
+  - name:  Test mpi4py ringtest
+    run:   mpiexec -n 2 python -m mpi4py.bench ringtest
+    shell: ${{ inputs.shell }}

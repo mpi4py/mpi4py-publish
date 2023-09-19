@@ -1,0 +1,32 @@
+target-version = "py37"
+
+select = [
+"A",
+"B",
+"C",
+"D",
+"E",
+"F",
+"G",
+"I",
+"Q",
+"S",
+"W",
+"UP",
+"ISC",
+"PIE",
+#"PTH",
+"RET",
+"RUF",
+"TRY",
+"YTT",
+]
+
+ignore = [
+]
+
+[per-file-ignores]
+".cibw/*" = ["D", "S101"]
+
+[pydocstyle]
+convention = "pep257"
