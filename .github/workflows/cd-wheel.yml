@@ -375,7 +375,7 @@ jobs:
         mpi: ${{ matrix.mpi }}
 
     - if: ${{ matrix.mpi == 'mpich' && runner.os == 'Linux' }}
-      run: ln -sr /usr/lib/$(arch)-linux-gnu/libmpi{ch,}.so.12
+      run: sudo ln -sr /usr/lib/$(arch)-linux-gnu/libmpi{ch,}.so.12
 
     - uses:  actions/setup-python@v4
       with:

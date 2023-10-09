@@ -135,10 +135,9 @@ for entry in builds:
     if (x, y) >= (3, 10) and py == "pp":  # TODO: update for pp310
         continue
     std, _, mpi = mpiabi.partition("-")
-    mpi = mpi.replace("impi", "intelmpi")
     mpispeclist = [mpi]
     if osname == "Linux" and mpi == "mpich":
-        mpispeclist.append("intelmpi")
+        mpispeclist.append("impi")
     pypy = "pypy-" if py == "pp" else ""
     pyspec = f"{pypy}{x}.{y}"
     for runner in runners[osname]:
