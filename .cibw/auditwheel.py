@@ -6,7 +6,7 @@ from auditwheel.policy import load_policies
 
 libmpi = []
 for name in ("mpi", "open-pal", "open-rte"):
-    for version in (1, 12, 20, 40, 80):
+    for version in (1, 12, 20, 40):
         libmpi.append(f"lib{name}.so.{version}")
 
 for policy in load_policies():

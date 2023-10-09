@@ -7,7 +7,7 @@ from delocate.delocating import delocate_wheel, filter_system_libs
 
 libmpi = []
 for name in ("mpi", "pmpi", "open-pal", "open-rte"):
-    for version in (1, 12, 20, 40, 80):
+    for version in (1, 12, 20, 40):
         libmpi.append(f"lib{name}.{version}.dylib")
 libmpi = set(libmpi)
 

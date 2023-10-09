@@ -46,7 +46,7 @@ def _dlopen_libmpi(libmpi=None):  # noqa: C901
             else:
                 libmpi = "libmpi.so{0}"
             yield libmpi.format("")
-            versions = (12, 80, 40, 20)
+            versions = (12, 40, 20)
             for version in versions:
                 yield libmpi.format(f".{version}")
         else:
