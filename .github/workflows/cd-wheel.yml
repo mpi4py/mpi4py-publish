@@ -295,6 +295,10 @@ jobs:
 
     steps:
 
+    - name: Configure hostname
+      run:  echo 127.0.0.1 `hostname` | sudo tee -a /etc/hosts > /dev/null
+      if:   runner.os == 'Linux' || runner.os == 'macOS'
+
     - uses: actions/checkout@v4
 
     - uses: mamba-org/setup-micromamba@v1
@@ -367,6 +371,10 @@ jobs:
         include: ${{ fromJSON(needs.test-setup.outputs.matrix-test-gh) }}
 
     steps:
+
+    - name: Configure hostname
+      run:  echo 127.0.0.1 `hostname` | sudo tee -a /etc/hosts > /dev/null
+      if:   runner.os == 'Linux' || runner.os == 'macOS'
 
     - uses: actions/checkout@v4
 
