@@ -57,14 +57,16 @@ anywhere in their home directory and appending to `LD_LIBRARY_PATH`.
 
 ```sh
 mkdir -p ~/.local/lib
-ln -s /usr/lib/$(arch)-linux-gnu/libmpich.so.12 ~/.local/lib/libmpi.so.12
+multiarch=$(arch | sed s/^ppc/powerpc/)-linux-gnu
+ln -s /usr/lib/$multiarch/libmpich.so.12 ~/.local/lib/libmpi.so.12
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:~/.local/lib
 ```
 
 A system-wide fix for all users requires `sudo` access:
 
 ```sh
-sudo ln -sr /usr/lib/$(arch)-linux-gnu/libmpi{ch,}.so.12
+multiarch=$(arch | sed s/^ppc/powerpc/)-linux-gnu
+sudo ln -sr /usr/lib/$multiarch/libmpi{ch,}.so.12
 ```
 
 ### Fedora/RHEL
