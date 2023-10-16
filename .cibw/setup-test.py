@@ -92,8 +92,6 @@ builds = sorted(builds, key=lambda r: (r[0].lower(), *r[1:]))
 matrix = []
 for entry in builds:
     osname, arch, mpiabi, py, (x, y) = entry
-    if (x, y) >= (3, 12):  # TODO: update for cp312
-        continue
     if (x, y) >= (3, 10) and py == "pp":  # TODO: update for pp310
         continue
     if osname == "Windows":
@@ -130,15 +128,13 @@ runners = {
 matrix = []
 for entry in builds:
     osname, arch, mpiabi, py, (x, y) = entry
-    if (x, y) >= (3, 12):  # TODO: update for cp312
-        continue
     if (x, y) >= (3, 10) and py == "pp":  # TODO: update for pp310
         continue
     std, _, mpi = mpiabi.partition("-")
     mpispeclist = [mpi]
     if osname == "Linux" and mpi == "mpich":
         mpispeclist.append("impi")
-    pypy = "pypy-" if py == "pp" else ""
+    pypy = "pypy" if py == "pp" else ""
     pyspec = f"{pypy}{x}.{y}"
     for runner in runners[osname]:
         if runner == "ubuntu-22.04":
