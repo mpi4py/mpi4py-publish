@@ -13,7 +13,7 @@ mpi4py wheels are uploaded to the [Anaconda.org](https://anaconda.org/mpi4py)
 package server. These wheels can be installed with `pip` specifying the
 alternative index URL:
 
-```
+```sh
 python -m pip install -i https://pypi.anaconda.org/mpi4py/simple mpi4py
 ```
 
@@ -25,6 +25,16 @@ Python virtual environments and use an externally-provided MPI runtime coming
 from the system package manager, sysadmin-maintained builds accessible via
 module files, or customized user builds.
 
+[Intel MPI](https://software.intel.com/intel-mpi-library) distributes [Linux
+and Windows wheels](https://pypi.org/project/impi-rt/#files) for Intel-based
+processor architectures (`x86_64`/`AMD64`). These wheels are hosted on
+[PyPI](https://pypi.org/project/impi-rt). mpi4py and Intel MPI wheels can be
+installed together with `pip` to get a ready-to-use Python+MPI environment:
+
+```sh
+python -m pip install impi-rt mpi4py \
+   --extra-index-url https://pypi.anaconda.org/mpi4py/simple
+```
 
 ## Linux (`x86_64`, `aarch64`, `ppc64le`):
 

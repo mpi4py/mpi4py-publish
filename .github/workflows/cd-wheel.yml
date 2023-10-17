@@ -301,6 +301,11 @@ jobs:
 
     - uses: actions/checkout@v4
 
+    - uses: actions/download-artifact@v3
+      with:
+        name: wheel-${{ runner.os }}
+        path: dist
+
     - uses: mamba-org/setup-micromamba@v1
       with:
         init-shell: bash
@@ -341,11 +346,6 @@ jobs:
           ;;
         esac
 
-    - uses: actions/download-artifact@v3
-      with:
-        name: wheel-${{ runner.os }}
-        path: dist
-
     - run: python -m pip install mpi4py --no-index --find-links=dist
 
     - uses: ./.github/actions/mpi4py-test-basic
@@ -378,6 +378,73 @@ jobs:
 
     - uses: actions/checkout@v4
 
+    - uses: actions/download-artifact@v3
+      with:
+        name: wheel-${{ runner.os }}
+        path: dist
+
+    - uses:  actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.py }}
+
+    - if: ${{ matrix.mpi == 'impi' }}
+      id: user
+      shell: bash
+      run: |
+        userdir=$(python -m site --user-base)
+        if [[ $(uname) =~ NT ]]; then
+            userdir=$(cygpath -u "$userdir")
+            mpiexec="$userdir/Library/bin/mpiexec.exe"
+        else
+            mpiexec="$userdir/bin/mpiexec"
+        fi
+        echo "mpiexec=$mpiexec"    >> "$GITHUB_OUTPUT"
+        set -x
+        python -m pip install --user --upgrade pip
+        python -m pip install --user impi-rt
+        python -m pip install --user mpi4py --no-index --find-links=dist
+      env:
+        PYTHONUSERBASE: ${{ runner.temp }}/user
+
+    - if: ${{ matrix.mpi == 'impi' }}
+      uses: ./.github/actions/mpi4py-test-basic
+      timeout-minutes: 2
+      with:
+        mpiexec: ${{steps.user.outputs.mpiexec }}
+      env:
+        PYTHONUSERBASE: ${{ runner.temp }}/user
+        I_MPI_FABRICS: shm
+
+    - if: ${{ matrix.mpi == 'impi' }}
+      id: venv
+      shell: bash
+      run: |
+        venvdir="${{ runner.temp }}/venv"
+        python -m venv "$venvdir"
+        if [[ $(uname) =~ NT ]]; then
+            venvdir=$(cygpath -u "$venvdir")
+            python="$venvdir/Scripts/python.exe"
+            mpiexec="$venvdir/Library/bin/mpiexec.exe"
+        else
+            python="$venvdir/bin/python"
+            mpiexec="$venvdir/bin/mpiexec"
+        fi
+        echo "python=$python"   >> "$GITHUB_OUTPUT"
+        echo "mpiexec=$mpiexec" >> "$GITHUB_OUTPUT"
+        set -x
+        $python -m pip install --upgrade pip
+        $python -m pip install impi-rt
+        $python -m pip install mpi4py --no-index --find-links=dist
+
+    - if: ${{ matrix.mpi == 'impi' }}
+      uses: ./.github/actions/mpi4py-test-basic
+      timeout-minutes: 2
+      with:
+        python: ${{ steps.venv.outputs.python }}
+        mpiexec: ${{steps.venv.outputs.mpiexec }}
+      env:
+        I_MPI_FABRICS: shm
+
     - uses: mpi4py/setup-mpi@v1
       with:
         mpi: ${{ matrix.mpi }}
@@ -385,16 +452,7 @@ jobs:
     - if: ${{ matrix.mpi == 'mpich' && runner.os == 'Linux' }}
       run: sudo ln -sr /usr/lib/$(arch)-linux-gnu/libmpi{ch,}.so.12
 
-    - uses:  actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.py }}
-
     - run: python -m pip install --upgrade pip
-
-    - uses: actions/download-artifact@v3
-      with:
-        name: wheel-${{ runner.os }}
-        path: dist
 
     - run: python -m pip install mpi4py --no-index --find-links=dist
 

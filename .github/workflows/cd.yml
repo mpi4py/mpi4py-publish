@@ -70,7 +70,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: anaconda
-      url:  https://anaconda.org/mpi4py/repo
+      url:  https://anaconda.org/mpi4py/mpi4py
 
     steps:
 

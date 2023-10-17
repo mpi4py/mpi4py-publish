@@ -14,14 +14,40 @@ def _verbose_info(message, verbosity=1):
         print(f"# [{__spec__.parent}] {message}", file=sys.stderr)
 
 
-_rpath_libmpi = []
-if sys.platform == "darwin":
-    _rpath_libmpi.extend([
-        "@rpath",
-        "/usr/local/lib",
-        "/opt/homebrew/lib",
-        "/opt/local/lib",
-    ])
+def _dlopen_rpath():
+    rpath = []
+
+    def add_rpath(*paths):
+        rpath.extend(paths)
+
+    def add_rpath_prefix(prefix):
+        if sys.platform == "linux":
+            add_rpath(os.path.join(prefix, "lib"))
+        if sys.platform == "win32":
+            add_rpath(os.path.join(prefix, "DLLs"))
+            add_rpath(os.path.join(prefix, "Library", "bin"))
+
+    site = sys.modules.get("site")
+    if site is not None and site.ENABLE_USER_SITE:
+        user_base = os.path.abspath(site.USER_BASE)
+        user_site = os.path.abspath(site.USER_SITE)
+        site_pkgs = os.path.commonpath((user_site, __file__))
+        if site_pkgs == user_site:
+            add_rpath_prefix(user_base)
+
+    if sys.exec_prefix != sys.base_exec_prefix:
+        add_rpath_prefix(sys.exec_prefix)
+
+    add_rpath("")
+
+    if sys.platform == "darwin":
+        add_rpath(
+            "/usr/local/lib",
+            "/opt/homebrew/lib",
+            "/opt/local/lib",
+        )
+
+    return rpath
 
 
 def _dlopen_libmpi(libmpi=None):  # noqa: C901
@@ -54,10 +80,12 @@ def _dlopen_libmpi(libmpi=None):  # noqa: C901
             yield "msmpi.dll"
 
     def libmpi_paths(path):
+        rpath = "@rpath" if sys.platform == "darwin" else ""
         for entry in path:
+            entry = entry or rpath
             entry = os.path.expandvars(entry)
             entry = os.path.expanduser(entry)
-            if os.path.isdir(entry) or entry == "@rpath":
+            if entry == rpath or os.path.isdir(entry):
                 for name in libmpi_names():
                     yield os.path.join(entry, name)
             else:
@@ -71,13 +99,9 @@ def _dlopen_libmpi(libmpi=None):  # noqa: C901
     if libmpi is not None:
         path = libmpi.split(os.pathsep)
     else:
-        path = _rpath_libmpi or None
-    if path is not None:
-        libmpi_iterable = libmpi_paths(path)
-    else:
-        libmpi_iterable = libmpi_names()
+        path = _libmpi_rpath or _dlopen_rpath() or [""]
     errors = ["cannot load MPI library"]
-    for filename in libmpi_iterable:
+    for filename in libmpi_paths(path):
         try:
             return dlopen(filename)
         except OSError as exc:
@@ -85,6 +109,9 @@ def _dlopen_libmpi(libmpi=None):  # noqa: C901
         except AttributeError as exc:
             errors.append(str(exc))
     raise RuntimeError("\n".join(errors))
+
+
+_libmpi_rpath = []
 
 
 def _get_mpiabi_from_libmpi(libmpi=None):
@@ -147,20 +174,9 @@ def _register(mpiabi):
     versions.sort()
 
 
-def _getenv(name):
-    value = os.environ.get(name)
-    if value and value.startswith("$"):
-        if value.startswith("${") and value.endswith("}"):
-            return _getenv(value[2:-1])
-        if value[:5].lower() == "$env:":
-            return _getenv(value[5:])
-        return _getenv(value[1:])
-    return value
-
-
 def _get_mpiabi():
-    string = _getenv("MPI4PY_MPIABI") or None
-    libmpi = _getenv("MPI4PY_LIBMPI") or None
+    string = os.environ.get("MPI4PY_MPIABI") or None
+    libmpi = os.environ.get("MPI4PY_LIBMPI") or None
     if string is not None:
         version, family = _get_mpiabi_from_string(string)
     else:
