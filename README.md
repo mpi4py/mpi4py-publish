@@ -25,16 +25,16 @@ Python virtual environments and use an externally-provided MPI runtime coming
 from the system package manager, sysadmin-maintained builds accessible via
 module files, or customized user builds.
 
-[Intel MPI](https://software.intel.com/intel-mpi-library) distributes [Linux
-and Windows wheels](https://pypi.org/project/impi-rt/#files) for Intel-based
-processor architectures (`x86_64`/`AMD64`). These wheels are hosted on
-[PyPI](https://pypi.org/project/impi-rt). mpi4py and Intel MPI wheels can be
-installed together with `pip` to get a ready-to-use Python+MPI environment:
-
-```sh
-python -m pip install impi-rt mpi4py \
-   --extra-index-url https://pypi.anaconda.org/mpi4py/simple
-```
+> [!NOTE]
+> [Intel MPI](https://software.intel.com/intel-mpi-library) distributes [Linux
+> and Windows wheels](https://pypi.org/project/impi-rt/#files) for Intel-based
+> processor architectures (`x86_64`/`AMD64`). mpi4py and Intel MPI wheels can
+> be installed side by side get a ready-to-use Python+MPI environment:
+>
+> ```sh
+> python -m pip install impi-rt mpi4py \
+>    --extra-index-url https://pypi.anaconda.org/mpi4py/simple
+> ```
 
 ## Linux (`x86_64`, `aarch64`, `ppc64le`):
 
@@ -93,7 +93,7 @@ module load mpi/openmpi-$(arch)  # for Open MPI
 After loading the requested MPI module, the `LD_LIBRARY_PATH` environment
 variable should be properly setup.
 
-## HPE Cray
+### HPE Cray
 
 Users must load the `cray-mpich-abi` module. For further details, refer to
 [`man intro_mpi`](https://cpe.ext.hpe.com/docs/mpt/mpich/intro_mpi.html#using-mpich-abi-compatibility).

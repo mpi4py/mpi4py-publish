@@ -96,6 +96,10 @@ for (package, version, tags), variantlist in wheels.items():
                 if libdir.exists():
                     libdir.rmdir()
 
+            mpipth = root_dir / "mpi.pth"
+            if mpipth.exists():
+                mpipth.unlink()
+
             record = distinfo_dir / "RECORD"
             record.unlink()
 
@@ -142,6 +146,11 @@ for (package, version, tags), variantlist in wheels.items():
             fh.write("# Register MPI ABI variants\n")
         for variant in variant_registry:
             fh.write(f"_mpiabi._register({variant!r})\n")
+        if tags[-1].startswith("win"):
+            fh.write(textwrap.dedent("""\
+            # Set Windows DLL search path
+            _mpiabi._set_windows_dll_path()
+            """))
 
     output_dir.mkdir(parents=True, exist_ok=True)
     wheel_pack.pack(root_dir, output_dir, None)

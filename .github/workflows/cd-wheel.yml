@@ -139,7 +139,7 @@ jobs:
 
     - id: build
       uses: pypa/cibuildwheel@v2.16.2
-      timeout-minutes: 30
+      timeout-minutes: 45
       with:
         package-dir: mpi4py.git
         output-dir:  wheelhouse
@@ -324,28 +324,6 @@ jobs:
             - ${{ matrix.mpi == 'impi_rt' && 'intel' || 'nodefaults' }}
             - nodefaults
 
-    - run: |
-        # Tweak MPI runtime
-        case $(uname)-${{ matrix.mpi }} in
-        Linux-*)
-          ;;
-        Darwin-*)
-          ;;
-        *NT*-impi_rt)
-          I_MPI_ROOT=$(cygpath -w "$CONDA_PREFIX/Library")
-          echo "I_MPI_ROOT=$I_MPI_ROOT"      >> $GITHUB_ENV
-          echo "$I_MPI_ROOT\\bin"            >> $GITHUB_PATH
-          echo "$I_MPI_ROOT\\bin\\libfabric" >> $GITHUB_PATH
-          ;;
-        *NT*-msmpi)
-          MSMPI_ROOT=$(cygpath -w "$CONDA_PREFIX/Library")
-          echo "MSMPI_BIN=$MSMPI_ROOT\\bin"     >> $GITHUB_ENV
-          echo "MSMPI_INC=$MSMPI_ROOT\\include" >> $GITHUB_ENV
-          echo "MSMPI_LIB64=$MSMPI_ROOT\\lib"   >> $GITHUB_ENV
-          echo "$MSMPI_BIN"                     >> $GITHUB_PATH
-          ;;
-        esac
-
     - run: python -m pip install mpi4py --no-index --find-links=dist
 
     - uses: ./.github/actions/mpi4py-test-basic
@@ -398,7 +376,7 @@ jobs:
         else
             mpiexec="$userdir/bin/mpiexec"
         fi
-        echo "mpiexec=$mpiexec"    >> "$GITHUB_OUTPUT"
+        echo "mpiexec=$mpiexec" >> "$GITHUB_OUTPUT"
         set -x
         python -m pip install --user --upgrade pip
         python -m pip install --user impi-rt
@@ -413,7 +391,6 @@ jobs:
         mpiexec: ${{steps.user.outputs.mpiexec }}
       env:
         PYTHONUSERBASE: ${{ runner.temp }}/user
-        I_MPI_FABRICS: shm
 
     - if: ${{ matrix.mpi == 'impi' }}
       id: venv
@@ -442,8 +419,6 @@ jobs:
       with:
         python: ${{ steps.venv.outputs.python }}
         mpiexec: ${{steps.venv.outputs.mpiexec }}
-      env:
-        I_MPI_FABRICS: shm
 
     - uses: mpi4py/setup-mpi@v1
       with:

@@ -14,56 +14,86 @@ def _verbose_info(message, verbosity=1):
         print(f"# [{__spec__.parent}] {message}", file=sys.stderr)
 
 
+def _site_prefixes():
+    prefixes = []
+    site = sys.modules.get("site")
+    if site is not None:
+        if sys.exec_prefix != sys.base_exec_prefix:
+            venv_base = sys.exec_prefix
+            prefixes.append(venv_base)
+        if site.ENABLE_USER_SITE:
+            user_base = os.path.abspath(site.USER_BASE)
+            prefixes.append(user_base)
+        if sys.base_exec_prefix in site.PREFIXES:
+            system_base = sys.base_exec_prefix
+            if sys.platform == "win32":
+                prefixes.append(system_base)
+    return prefixes
+
+
 def _dlopen_rpath():
     rpath = []
 
-    def add_rpath(*paths):
-        rpath.extend(paths)
+    def add_rpath(*directory):
+        path = os.path.join(*directory)
+        if path not in rpath:
+            rpath.append(path)
 
     def add_rpath_prefix(prefix):
         if sys.platform == "linux":
-            add_rpath(os.path.join(prefix, "lib"))
+            add_rpath(prefix, "lib")
         if sys.platform == "win32":
-            add_rpath(os.path.join(prefix, "DLLs"))
-            add_rpath(os.path.join(prefix, "Library", "bin"))
+            add_rpath(prefix, "DLLs")
+            add_rpath(prefix, "Library", "bin")
 
-    site = sys.modules.get("site")
-    if site is not None and site.ENABLE_USER_SITE:
-        user_base = os.path.abspath(site.USER_BASE)
-        user_site = os.path.abspath(site.USER_SITE)
-        site_pkgs = os.path.commonpath((user_site, __file__))
-        if site_pkgs == user_site:
-            add_rpath_prefix(user_base)
-
-    if sys.exec_prefix != sys.base_exec_prefix:
-        add_rpath_prefix(sys.exec_prefix)
+    for prefix in _site_prefixes():
+        add_rpath_prefix(prefix)
 
     add_rpath("")
 
     if sys.platform == "darwin":
-        add_rpath(
-            "/usr/local/lib",
-            "/opt/homebrew/lib",
-            "/opt/local/lib",
-        )
+        add_rpath("/usr/local/lib")
+        add_rpath("/opt/homebrew/lib")
+        add_rpath("/opt/local/lib")
 
     return rpath
 
 
 def _dlopen_libmpi(libmpi=None):  # noqa: C901
+    # pylint: disable=too-many-statements
     # pylint: disable=import-outside-toplevel
     import ctypes as ct
 
     mode = ct.DEFAULT_MODE
     if os.name == "posix":
-        mode = os.RTLD_NOW | os.RTLD_GLOBAL
+        mode = os.RTLD_NOW | os.RTLD_GLOBAL | os.RTLD_NODELETE
 
     def dlopen(name):
         _verbose_info(f"trying to dlopen {name!r}")
         lib = ct.CDLL(name, mode)
         _ = lib.MPI_Get_version
         _verbose_info(f"MPI library from {name!r}")
+        if name is not None and sys.platform == "linux":
+            if hasattr(lib, "I_MPI_Check_image_status"):
+                if os.path.basename(name) != name:
+                    dlopen_impi_libfabric(os.path.dirname(name))
         return lib
+
+    def dlopen_impi_libfabric(libdir):
+        ofi_internal = (
+            os.environ.get("I_MPI_OFI_LIBRARY_INTERNAL", "").lower()
+            in ("", "1", "yes", "on", "true", "enable")
+        )
+        ofi_required = os.environ.get("I_MPI_FABRICS") != "shm"
+        ofi_library_path = os.path.join(libdir, "libfabric")
+        ofi_provider_path = os.path.join(ofi_library_path, "prov")
+        ofi_filename = os.path.join(ofi_library_path, "libfabric.so.1")
+        if ofi_internal and ofi_required and os.path.isfile(ofi_filename):
+            if "FI_PROVIDER_PATH" not in os.environ:
+                if os.path.isdir(ofi_provider_path):
+                    os.environ["FI_PROVIDER_PATH"] = ofi_provider_path
+            ct.CDLL(ofi_filename, mode)
+            _verbose_info(f"OFI library from {ofi_filename!r}")
 
     def libmpi_names():
         if os.name == "posix":
@@ -226,3 +256,57 @@ class _Finder:
 def _install_finder():
     if _Finder not in sys.meta_path:
         sys.meta_path.append(_Finder)
+
+
+def _set_windows_dll_path():  # noqa: C901
+    i_mpi_root = os.environ.get("I_MPI_ROOT")
+    i_mpi_library_kind = (
+        os.environ.get("I_MPI_LIBRARY_KIND") or
+        os.environ.get("library_kind") or
+        "release"
+    )
+    i_mpi_ofi_library_internal = (
+        os.environ.get("I_MPI_OFI_LIBRARY_INTERNAL", "").lower()
+        not in ("0", "no", "off", "false", "disable")
+    )
+    msmpi_bin = os.environ.get("MSMPI_BIN")
+
+    dllpath = []
+
+    def add_dllpath(*directory, dll=""):
+        path = os.path.join(*directory)
+        if path not in dllpath:
+            filename = os.path.join(path, f"{dll}.dll")
+            if os.path.isfile(filename):
+                dllpath.append(path)
+
+    def add_dllpath_impi(*rootdir):
+        if i_mpi_ofi_library_internal:
+            add_dllpath(*rootdir, "libfabric", "bin", dll="libfabric")
+            add_dllpath(*rootdir, "bin", "libfabric", dll="libfabric")
+        if i_mpi_library_kind:
+            add_dllpath(*rootdir, "bin", i_mpi_library_kind, dll="impi")
+        add_dllpath(*rootdir, "bin", dll="impi")
+
+    def add_dllpath_msmpi(*bindir):
+        add_dllpath(*bindir, dll="msmpi")
+
+    for prefix in _site_prefixes():
+        add_dllpath_impi(prefix, "Library")
+        add_dllpath_msmpi(prefix, "Library", "bin")
+
+    if i_mpi_root:
+        add_dllpath_impi(i_mpi_root)
+
+    if msmpi_bin:
+        add_dllpath_msmpi(msmpi_bin)
+
+    ospath = os.environ["PATH"].split(os.path.pathsep)
+    for entry in dllpath:
+        if entry not in ospath:
+            ospath.append(entry)
+    os.environ["PATH"] = os.path.pathsep.join(ospath)
+
+    if hasattr(os, "add_dll_directory"):
+        for entry in dllpath:
+            os.add_dll_directory(entry)
