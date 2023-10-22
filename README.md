@@ -29,7 +29,7 @@ module files, or customized user builds.
 > [Intel MPI](https://software.intel.com/intel-mpi-library) distributes [Linux
 > and Windows wheels](https://pypi.org/project/impi-rt/#files) for Intel-based
 > processor architectures (`x86_64`/`AMD64`). mpi4py and Intel MPI wheels can
-> be installed side by side get a ready-to-use Python+MPI environment:
+> be installed side by side to get a ready-to-use Python+MPI environment:
 >
 > ```sh
 > python -m pip install impi-rt mpi4py \
