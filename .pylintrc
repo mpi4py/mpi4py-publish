@@ -1,0 +1,5 @@
+[MASTER]
+score = no
+recursive = yes
+ignore = auditwheel.py
+ignore-patterns = .*-.*\.py

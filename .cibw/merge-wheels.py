@@ -37,7 +37,7 @@ wheelhouse = Path(opts.wheelhouse)
 output_dir = Path(opts.output_dir)
 working_dir = Path(tempfile.mkdtemp())
 ext_suffix = ".so" if os.name == "posix" else ".pyd"
-ext_name = "MPI"
+extensions = ["mpi4py.MPI"]
 
 shutil.rmtree(output_dir, ignore_errors=True)
 output_dir.mkdir(parents=True, exist_ok=True)
@@ -76,7 +76,7 @@ for (package, version, tags), variantlist in wheels.items():
         if i == 0:
             with WheelFile(wheelpath) as wf:
                 print(
-                    f"Unpacking wheel {wheelpath} ...",
+                    f"Unpacking wheel {wheelpath}...",
                     end="", flush=True,
                 )
                 for zinfo in wf.filelist:
@@ -85,8 +85,11 @@ for (package, version, tags), variantlist in wheels.items():
 
             distinfo_dir.with_stem(distver).rename(distinfo_dir)
 
-            for extmod in package_dir.glob(f"{ext_name}.*{ext_suffix}"):
-                extmod.unlink()
+            for extension in extensions:
+                extpath = Path().joinpath(*extension.split("."))
+                for extfile in root_dir.glob(f"{extpath}.*{ext_suffix}"):
+                    extfile.unlink()
+
             for libdir in (
                 Path(dist).with_suffix(".libs"),
                 Path(package).with_suffix(".libs"),
@@ -116,19 +119,25 @@ for (package, version, tags), variantlist in wheels.items():
         variant = variant[1:].translate(transtb)
         variant_registry.append(variant)
         with WheelFile(wheelpath) as wf:
+            extract = []
             for zinfo in wf.filelist:
                 member = Path(zinfo.filename)
-                if member.match(f"{package}/{ext_name}.*{ext_suffix}"):
-                    print(
-                        f"Extracting: {member} [{variant}]...",
-                        end="", flush=True,
-                    )
-                    zip_extract(wf, zinfo, root_dir)
-                    extension = root_dir.joinpath(member)
-                    extname, suffix = extension.name.split(".", 1)
-                    filename = f"{extname}.{variant}.{suffix}"
-                    extension.rename(extension.parent / filename)
-                    print("OK", flush=True)
+                for extension in extensions:
+                    extpath = Path().joinpath(*extension.split("."))
+                    if member.match(f"{extpath}.*{ext_suffix}"):
+                        extract.append(zinfo)
+            for zinfo in extract:
+                member = Path(zinfo.filename)
+                print(
+                    f"Extracting: {member} [{variant}]...",
+                    end="", flush=True,
+                )
+                zip_extract(wf, zinfo, root_dir)
+                extension = root_dir.joinpath(member)
+                extname, suffix = extension.name.split(".", 1)
+                filename = f"{extname}.{variant}.{suffix}"
+                extension.rename(extension.parent / filename)
+                print("OK", flush=True)
 
     source = Path(__file__).parent / "mpi4py_mpiabi.py"
     pycode = source.read_text(encoding="utf-8")
@@ -145,7 +154,8 @@ for (package, version, tags), variantlist in wheels.items():
         if variant_registry:
             fh.write("# Register MPI ABI variants\n")
         for variant in variant_registry:
-            fh.write(f"_mpiabi._register({variant!r})\n")
+            for module in extensions:
+                fh.write(f"_mpiabi._register({module!r}, {variant!r})\n")
         if tags[-1].startswith("win"):
             fh.write(textwrap.dedent("""\
             # Set Windows DLL search path

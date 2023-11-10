@@ -11,7 +11,7 @@ import warnings
 
 def _verbose_info(message, verbosity=1):
     if sys.flags.verbose >= verbosity:
-        print(f"# [{__spec__.parent}] {message}", file=sys.stderr)
+        print(f"# [{__name__}] {message}", file=sys.stderr)
 
 
 def _site_prefixes():
@@ -82,7 +82,7 @@ def _dlopen_libmpi(libmpi=None):  # noqa: C901
     def dlopen_impi_libfabric(libdir):
         ofi_internal = (
             os.environ.get("I_MPI_OFI_LIBRARY_INTERNAL", "").lower()
-            in ("", "1", "yes", "on", "true", "enable")
+            in ("", "1", "y", "on", "yes", "true", "enable")
         )
         ofi_required = os.environ.get("I_MPI_FABRICS") != "shm"
         ofi_library_path = os.path.join(libdir, "libfabric")
@@ -194,35 +194,42 @@ def _get_mpiabi_from_string(string, strict=False):
     return (int(vmajor), int(vminor)), family.lower() or None
 
 
+def _get_mpiabi():
+    version = getattr(_get_mpiabi, "version", None)
+    family = getattr(_get_mpiabi, "family", None)
+    if version is None:
+        string = os.environ.get("MPI4PY_MPIABI") or None
+        libmpi = os.environ.get("MPI4PY_LIBMPI") or None
+        if string is not None:
+            version, family = _get_mpiabi_from_string(string)
+        else:
+            version, family = _get_mpiabi_from_libmpi(libmpi)
+        _get_mpiabi.version = version
+        _get_mpiabi.family = family
+    return version, family
+
+
 _registry = {}
 
 
-def _register(mpiabi):
+def _register(module, mpiabi):
     version, family = _get_mpiabi_from_string(mpiabi, strict=True)
-    versions = _registry.setdefault(family, [])
+    versions = _registry.setdefault(module, {}).setdefault(family, [])
     versions.append(version)
     versions.sort()
 
 
-def _get_mpiabi():
-    string = os.environ.get("MPI4PY_MPIABI") or None
-    libmpi = os.environ.get("MPI4PY_LIBMPI") or None
-    if string is not None:
-        version, family = _get_mpiabi_from_string(string)
-    else:
-        version, family = _get_mpiabi_from_libmpi(libmpi)
-    versions = _registry.get(family)
+def _get_mpiabi_suffix(module):
+    if module not in _registry:
+        return None
+    version, family = _get_mpiabi()
+    versions = _registry[module].get(family)
     if versions:
         vmin, vmax = versions[0], versions[-1]
         version = max(vmin, min(version, vmax))
-    return version, family
-
-
-def _get_mpiabi_string():
-    version, family = _get_mpiabi()
     vmajor, vminor = version
-    suffix = f"-{family}" if family else ""
-    return f"mpi{vmajor}{vminor}{suffix}"
+    family_tag = f"-{family}" if family else ""
+    return f".mpi{vmajor}{vminor}{family_tag}"
 
 
 class _Finder:
@@ -233,23 +240,24 @@ class _Finder:
     def find_spec(cls, fullname, path, target=None):
         """Find MPI ABI extension module spec."""
         # pylint: disable=unused-argument
-        pkgname, _, modname = fullname.rpartition(".")
-        if pkgname == __spec__.parent and modname in {"MPI"}:
-            mpiabi_string = _get_mpiabi_string()
-            mpiabi_suffix = f".{mpiabi_string}"
-            _verbose_info(f"MPI ABI extension suffix: {mpiabi_suffix!r}")
-            extension_suffixes = importlib.machinery.EXTENSION_SUFFIXES
-            spec_from_file_location = importlib.util.spec_from_file_location
-            for entry in path:
-                for extension_suffix in extension_suffixes:
-                    filename = f"{modname}{mpiabi_suffix}{extension_suffix}"
-                    location = os.path.join(entry, filename)
-                    if os.path.isfile(location):
-                        return spec_from_file_location(fullname, location)
-            warnings.warn(
-                f"unsupported MPI ABI {mpiabi_string!r}",
-                category=RuntimeWarning, stacklevel=2,
-            )
+        mpiabi_suffix = _get_mpiabi_suffix(fullname)
+        if mpiabi_suffix is None:
+            return None
+        _verbose_info(f"MPI ABI extension module: {fullname!r}")
+        _verbose_info(f"MPI ABI extension suffix: {mpiabi_suffix!r}")
+        ext_name = fullname.rpartition(".")[2]
+        extension_suffixes = importlib.machinery.EXTENSION_SUFFIXES
+        spec_from_file_location = importlib.util.spec_from_file_location
+        for entry in path:
+            for ext_suffix in extension_suffixes:
+                filename = f"{ext_name}{mpiabi_suffix}{ext_suffix}"
+                location = os.path.join(entry, filename)
+                if os.path.isfile(location):
+                    return spec_from_file_location(fullname, location)
+        warnings.warn(
+            f"unsupported MPI ABI {mpiabi_suffix[1:]!r}",
+            category=RuntimeWarning, stacklevel=2,
+        )
         return None
 
 
