@@ -252,6 +252,165 @@ jobs:
         name: wheel-${{ runner.os }}
         path: dist/*.whl
 
+  test-Linux:
+    if: ${{ contains(needs.setup.outputs.os-arch-list, 'Linux') }}
+    needs: [setup, merge]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - debian:10
+          - debian:11
+          - debian:12
+          - ubuntu:20.04
+          - ubuntu:22.04
+          - ubuntu:23.10
+          - fedora:37
+          - fedora:38
+        platform:
+          - amd64
+          - arm64
+          - ppc64le
+        exclude:
+          - image: debian:10
+            platform: ppc64le
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/download-artifact@v3
+      with:
+        name: wheel-${{ runner.os }}
+        path: dist
+
+    - if: ${{ runner.os == 'Linux' }}
+      uses: docker/setup-qemu-action@v1
+      with:
+        platforms: all
+
+    - if: ${{ runner.os == 'Linux' }}
+      run: |
+        image=${{ matrix.image }} platform=${{ matrix.platform }}
+        arch=$(echo $platform | sed s/amd/x86_/ | sed s/arm/aarch/)
+        ls dist | grep -q $arch || exit 0
+        docker run \
+          --rm \
+          --volume $(pwd):$(pwd) \
+          --workdir $(pwd) \
+          --platform linux/$platform $image \
+          /bin/bash .cibw/test-Linux.sh
+      timeout-minutes: 45
+
+  test-macOS:
+    if: contains(needs.setup.outputs.os-arch-list, 'macOS-x86_64')
+    needs: [setup, merge]
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner:
+          - macos-11
+          - macos-12
+          - macos-13
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/download-artifact@v3
+      with:
+        name: wheel-${{ runner.os }}
+        path: dist
+
+    - run: .cibw/test-${{ runner.os }}.sh
+      timeout-minutes: 45
+
+  test-Windows:
+    if: contains(needs.setup.outputs.os-arch-list, 'Windows-AMD64')
+    needs: [setup, merge]
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner:
+          - windows-2019
+          - windows-2022
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/download-artifact@v3
+      with:
+        name: wheel-${{ runner.os }}
+        path: dist
+
+    - if: ${{ runner.os != 'Windows' }}
+      run: .cibw/test-${{ runner.os }}.sh
+
+    - if: ${{ runner.os == 'Windows' }}
+      uses: actions/setup-python@v4
+      with:
+        update-environment: false
+        python-version: |
+          3.8
+          3.9
+          3.10
+          3.11
+          3.12
+          pypy3.8
+          pypy3.9
+          pypy3.10
+
+    - if: ${{ runner.os == 'Windows' }}
+      run: |
+        # setup Python versions
+        setup-python() {
+          local name="$1"
+          local version="${2:-}"
+          if [[ -z "$version" ]]; then
+            echo "$name=" >> $GITHUB_ENV; return 0
+          fi
+          local root="$RUNNER_TOOL_CACHE"
+          if [[ "$(uname)" =~ NT ]]; then
+            local root=$(cygpath -u "$root")
+          fi
+          if [[ "$name" =~ pypy ]]; then
+            local pydir=PyPy pyarch=x86
+          else
+            local pydir=Python pyarch=x64
+          fi
+          local path=$(ls "$root"/$pydir/${version}.*/$pyarch/python.exe)
+          echo "$name=$path" >> $GITHUB_ENV;
+        }
+        setup-python python36  ""
+        setup-python python37  ""
+        setup-python python38  3.8
+        setup-python python39  3.9
+        setup-python python310 3.10
+        setup-python python311 3.11
+        setup-python python312 3.12
+        setup-python pypy36    ""
+        setup-python pypy37    ""
+        setup-python pypy38    3.8
+        setup-python pypy39    3.9
+        setup-python pypy310   3.10
+
+    - if: ${{ runner.os == 'Windows' }}
+      uses: mpi4py/setup-mpi@v1
+      with:
+        mpi: intelmpi
+
+    - if: ${{ runner.os == 'Windows' }}
+      uses: mpi4py/setup-mpi@v1
+      with:
+        mpi: msmpi
+
+    - run: .cibw/test-${{ runner.os }}.sh
+      timeout-minutes: 45
+
   test-setup:
     needs: [setup, merge]
     runs-on: 'ubuntu-latest'
@@ -425,7 +584,7 @@ jobs:
         mpi: ${{ matrix.mpi }}
 
     - if: ${{ matrix.mpi == 'mpich' && runner.os == 'Linux' }}
-      run: sudo ln -sr /usr/lib/$(arch)-linux-gnu/libmpi{ch,}.so.12
+      run: cd /usr/lib/$(gcc -print-multiarch) && sudo ln -s libmpi{ch,}.so.12
 
     - run: python -m pip install --upgrade pip
 
