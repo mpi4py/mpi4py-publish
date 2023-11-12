@@ -117,7 +117,6 @@ runners = {
         "ubuntu-22.04",
     ],
     "macOS": [
-        "macos-11",
         "macos-12",
         "macos-13",
     ],
@@ -145,9 +144,6 @@ for entry in builds:
             if py == "cp" and (x, y) < (3, 8):
                 continue
         if runner == "macos-12":
-            if py == "cp" and (x, y) < (3, 7):
-                continue
-        if runner in "macos-11":
             if py == "cp" and (x, y) < (3, 7):
                 continue
         for mpispec in mpispeclist:
