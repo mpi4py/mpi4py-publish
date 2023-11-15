@@ -26,6 +26,9 @@ def _site_prefixes():
             prefixes.append(user_base)
         if sys.base_exec_prefix in site.PREFIXES:
             system_base = sys.base_exec_prefix
+            if sys.platform == "linux":
+                if system_base != "/usr":
+                    prefixes.append(system_base)
             if sys.platform == "win32":
                 prefixes.append(system_base)
     return prefixes
