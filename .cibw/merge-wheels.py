@@ -112,8 +112,9 @@ for (package, version, tags), variantlist in wheels.items():
             data = data.replace(variant, "")
             metadata.write_text(data, encoding="utf-8")
 
-            pkgdata = package_dir / "mpi.cfg"
-            pkgdata.write_text("[mpi]\n", encoding="utf-8")
+            if int(version.partition('.')[0]) < 4:
+                pkgdata = package_dir / "mpi.cfg"
+                pkgdata.write_text("[mpi]\n", encoding="utf-8")
 
         transtb = str.maketrans("_.", "--")
         variant = variant[1:].translate(transtb)
