@@ -293,8 +293,12 @@ def _set_windows_dll_path():  # noqa: C901
 
     def add_dllpath_impi(*rootdir):
         if i_mpi_ofi_library_internal:
-            add_dllpath(*rootdir, "libfabric", "bin", dll="libfabric")
-            add_dllpath(*rootdir, "bin", "libfabric", dll="libfabric")
+            for subdir in (
+                ("opt", "mpi", "libfabric", "bin"),
+                ("libfabric", "bin"),
+                ("bin", "libfabric"),
+            ):
+                add_dllpath(*rootdir, *subdir, dll="libfabric")
         if i_mpi_library_kind:
             add_dllpath(*rootdir, "bin", i_mpi_library_kind, dll="impi")
         add_dllpath(*rootdir, "bin", dll="impi")
