@@ -111,7 +111,7 @@ jobs:
         path: mpi4py.git
 
     - id: setup-python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: 3
 
@@ -220,7 +220,7 @@ jobs:
       working-directory: mpi4py.git
 
     - id: setup-python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: 3
 
@@ -361,7 +361,7 @@ jobs:
         name: wheel-${{ runner.os }}
         path: dist
 
-    - uses:  actions/setup-python@v4
+    - uses:  actions/setup-python@v5
       with:
         python-version: ${{ matrix.py }}
 
