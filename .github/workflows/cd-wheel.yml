@@ -228,7 +228,7 @@ jobs:
       run: python -m pip install -U wheel
 
     - id: download
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: build-${{ runner.os }}-${{ matrix.arch }}
         path: wheelhouse
@@ -261,17 +261,17 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - if: ${{ contains(needs.setup.outputs.os-arch-list, '"Linux-x86_64"') }}
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: build-Linux-x86_64
         path: wheelhouse
     - if: ${{ contains(needs.setup.outputs.os-arch-list, '"macOS-x86_64"') }}
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: build-macOS-x86_64
         path: wheelhouse
     - if: ${{ contains(needs.setup.outputs.os-arch-list, '"Windows-AMD64"') }}
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: build-Windows-AMD64
         path: wheelhouse
@@ -301,7 +301,7 @@ jobs:
 
     - uses: actions/checkout@v4
 
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4
       with:
         name: wheel-${{ runner.os }}
         path: dist
@@ -356,7 +356,7 @@ jobs:
 
     - uses: actions/checkout@v4
 
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4
       with:
         name: wheel-${{ runner.os }}
         path: dist
