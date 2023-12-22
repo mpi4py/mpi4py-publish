@@ -75,28 +75,18 @@ jobs:
     steps:
 
     - name: Download sdist artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
-        name: sdist
         path: dist
+        pattern: sdist
+        merge-multiple: true
 
     - name: Download wheel artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
-        name: wheel-Linux
         path: dist
-
-    - name: Download wheel artifacts
-      uses: actions/download-artifact@v3
-      with:
-        name: wheel-macOS
-        path: dist
-
-    - name: Download wheel artifacts
-      uses: actions/download-artifact@v3
-      with:
-        name: wheel-Windows
-        path: dist
+        pattern: wheel-*
+        merge-multiple: true
 
     - name: Report sha256sum
       run:  |
