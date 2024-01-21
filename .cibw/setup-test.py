@@ -100,6 +100,8 @@ for entry in builds:
             continue  # mamba-org/setup-micromamba#133
     for mpiname, mpiversions in mpimap[osname][mpiabi]:
         for mpiversion in mpiversions:
+            if (x, y) == (3, 6) and f"{mpiname}-{mpiversion}" == "openmpi-5.0":
+                continue  # python=3.6 openmpi=5.0 cannot be solved
             row = {
                 "os": osname,
                 "mpi": mpiname,
