@@ -58,7 +58,7 @@ for (package, version, tags), variantlist in wheels.items():
     namever = f"{package}-{version}"
     wheeltags = "-".join(tags)
     root_dir = working_dir / namever
-    package_dir = root_dir / package
+    package_dir = root_dir / package.partition("_")[0]
     distinfo_dir = root_dir / f"{namever}.dist-info"
 
     variant_registry = []
