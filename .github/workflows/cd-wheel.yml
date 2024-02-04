@@ -267,6 +267,12 @@ jobs:
         path: wheelhouse
         pattern: build-Linux-x86_64-*
         merge-multiple: true
+    - if: ${{ contains(needs.setup.outputs.os-arch-list, '"macOS-arm64"') }}
+      uses: actions/download-artifact@v4
+      with:
+        path: wheelhouse
+        pattern: build-macOS-arm64-*
+        merge-multiple: true
     - if: ${{ contains(needs.setup.outputs.os-arch-list, '"macOS-x86_64"') }}
       uses: actions/download-artifact@v4
       with:
@@ -285,9 +291,7 @@ jobs:
   test-cf:
     if: ${{ needs.test-setup.outputs.matrix-test-cf != '[]' }}
     needs: test-setup
-    runs-on: ${{ (matrix.os == 'Linux'   && 'ubuntu-latest' ) ||
-                 (matrix.os == 'macOS'   && 'macos-latest'  ) ||
-                 (matrix.os == 'Windows' && 'windows-latest') }}
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:

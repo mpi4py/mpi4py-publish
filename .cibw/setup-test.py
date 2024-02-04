@@ -84,12 +84,18 @@ for whl in sorted(glob.glob(os.path.join(wheelhouse, "*.whl"))):
     assert match is not None
     std, mpi, py, x, y, ostag, archtag = match.groups()
     osname, mpiabi, x, y = osmap[ostag], f"{std}-{mpi}", int(x), int(y)
-    for arch in ("x86_64", "AMD64"):
+    for arch in ("x86_64", "AMD64", "arm64"):
         if arch.lower() in archtag.lower():
             builds.append((osname, arch, mpiabi, py, (x, y)))
 builds = sorted(builds, key=lambda r: (r[0].lower(), *r[1:]))
 
 
+runners = {
+    "Linux-x86_64": "ubuntu-22.04",
+    "macOS-arm64": "macos-14",
+    "macOS-x86_64": "macos-13",
+    "Windows-AMD64": "windows-2022",
+}
 matrix = []
 for entry in builds:
     osname, arch, mpiabi, py, (x, y) = entry
@@ -98,12 +104,19 @@ for entry in builds:
     if osname == "Windows":
         if py == "pp" and (x, y) == (3, 7):
             continue  # mamba-org/setup-micromamba#133
+    runner = runners[f"{osname}-{arch}"]
     for mpiname, mpiversions in mpimap[osname][mpiabi]:
         for mpiversion in mpiversions:
-            if (x, y) == (3, 6) and f"{mpiname}-{mpiversion}" == "openmpi-5.0":
+            if f"{osname}-{arch}" == "macOS-arm64":
+                if f"{mpiname}-{mpiversion}" == "mpich-3.2":
+                    continue
+                if f"{mpiname}-{mpiversion}" == "openmpi-3.1":
+                    continue
+            if (py == "cp" and (x, y) == (3, 6)
+                and f"{mpiname}-{mpiversion}" == "openmpi-5.0"):
                 continue  # python=3.6 openmpi=5.0 cannot be solved
             row = {
-                "os": osname,
+                "runner": runner,
                 "mpi": mpiname,
                 "mpi-version": mpiversion,
                 "py": f"{x}.{y}{pymap[py]}",
@@ -114,15 +127,17 @@ print(f"matrix-test-cf={json.dumps(matrix)}")
 
 
 runners = {
-    "Linux": [
+    "Linux-x86_64": [
         "ubuntu-20.04",
         "ubuntu-22.04",
     ],
-    "macOS": [
-        "macos-12",
+    "macOS-arm64": [
+        "macos-14",
+    ],
+    "macOS-x86_64": [
         "macos-13",
     ],
-    "Windows": [
+    "Windows-AMD64": [
         "windows-2019",
         "windows-2022",
     ],
@@ -138,9 +153,12 @@ for entry in builds:
         mpispeclist.append("impi")
     pypy = "pypy" if py == "pp" else ""
     pyspec = f"{pypy}{x}.{y}"
-    for runner in runners[osname]:
+    for runner in runners[f"{osname}-{arch}"]:
         if runner == "ubuntu-22.04":
             if py == "cp" and (x, y) < (3, 7):
+                continue
+        if runner == "macos-14":
+            if py == "cp" and (x, y) < (3, 10):
                 continue
         if runner == "macos-13":
             if py == "cp" and (x, y) < (3, 8):
