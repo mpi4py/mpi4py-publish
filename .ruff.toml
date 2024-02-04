@@ -1,6 +1,6 @@
 target-version = "py37"
 
-select = [
+lint.select = [
 "A",
 "B",
 "C",
@@ -22,11 +22,11 @@ select = [
 "YTT",
 ]
 
-ignore = [
+lint.ignore = [
 ]
 
-[per-file-ignores]
+[lint.per-file-ignores]
 ".cibw/*" = ["D", "S101"]
 
-[pydocstyle]
+[lint.pydocstyle]
 convention = "pep257"
