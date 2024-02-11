@@ -14,7 +14,7 @@ package server. These wheels can be installed with `pip` specifying the
 alternative index URL:
 
 ```sh
-python -m pip install -i https://pypi.anaconda.org/mpi4py/simple mpi4py
+python -m pip install mpi4py -i https://pypi.anaconda.org/mpi4py/simple
 ```
 
 mpi4py wheels can be installed (with `pip`) in [conda](https://docs.conda.io)
