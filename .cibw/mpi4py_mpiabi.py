@@ -26,10 +26,10 @@ def _site_prefixes():
             prefixes.append(user_base)
         if sys.base_exec_prefix in site.PREFIXES:
             system_base = sys.base_exec_prefix
-            if sys.platform == "linux":
+            if os.name == "posix":
                 if system_base != "/usr":
                     prefixes.append(system_base)
-            if sys.platform == "win32":
+            else:
                 prefixes.append(system_base)
     return prefixes
 
@@ -43,9 +43,9 @@ def _dlopen_rpath():
             rpath.append(path)
 
     def add_rpath_prefix(prefix):
-        if sys.platform == "linux":
+        if os.name == "posix":
             add_rpath(prefix, "lib")
-        if sys.platform == "win32":
+        else:
             add_rpath(prefix, "DLLs")
             add_rpath(prefix, "Library", "bin")
 
