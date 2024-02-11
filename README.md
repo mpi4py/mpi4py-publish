@@ -25,7 +25,7 @@ Python virtual environments and use an externally-provided MPI runtime coming
 from the system package manager, sysadmin-maintained builds accessible via
 module files, or customized user builds.
 
-> [!NOTE]
+> [!TIP]
 > [Intel MPI](https://software.intel.com/intel-mpi-library) distributes [Linux
 > and Windows wheels](https://pypi.org/project/impi-rt/#files) for Intel-based
 > processor architectures (`x86_64`/`AMD64`). mpi4py and Intel MPI wheels can
