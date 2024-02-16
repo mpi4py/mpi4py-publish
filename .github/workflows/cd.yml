@@ -3,7 +3,7 @@ name: cd
 permissions:
   contents: read
 
-on:
+on:  # yamllint disable-line rule:truthy
   schedule:
     - cron: '0 0 * * 0'
   workflow_dispatch:
@@ -20,7 +20,7 @@ on:
         type: string
       publish-anaconda:
         description: "Publish to Anaconda"
-        default: False
+        default: false
         type: boolean
 
 jobs:

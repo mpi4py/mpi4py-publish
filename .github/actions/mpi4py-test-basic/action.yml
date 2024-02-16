@@ -1,4 +1,4 @@
----
+---  # yamllint disable-line rule:document-start
 name: 'mpi4py-test-basic'
 description: 'Run basic mpi4py tests.'
 author: 'Lisandro Dalcin'
@@ -38,9 +38,13 @@ runs:
     shell: ${{ inputs.shell }}
 
   - name:  Test mpi4py helloworld
-    run:   ${{ inputs.mpiexec }} -n 2 ${{ inputs.python }} -m mpi4py.bench helloworld
+    run:   >-
+      ${{ inputs.mpiexec }} -n 2
+      ${{ inputs.python }} -m mpi4py.bench helloworld
     shell: ${{ inputs.shell }}
 
   - name:  Test mpi4py ringtest
-    run:   ${{ inputs.mpiexec }} -n 2 ${{ inputs.python }} -m mpi4py.bench ringtest
+    run:   >-
+      ${{ inputs.mpiexec }} -n 2
+      ${{ inputs.python }} -m mpi4py.bench ringtest
     shell: ${{ inputs.shell }}
