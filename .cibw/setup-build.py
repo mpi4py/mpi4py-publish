@@ -23,13 +23,13 @@ def pp3(y_min=7, y_max=10):
 
 OS_ARCH_PY = {
     "Linux": {
-        "x86_64": cp3() + pp3(),
         "aarch64": cp3() + pp3(),
         "ppc64le": cp3(),
+        "x86_64": cp3() + pp3(),
     },
     "macOS": {
-        "x86_64": cp3() + pp3(),
         "arm64": cp3(8, 12),
+        "x86_64": cp3() + pp3(),
     },
     "Windows": {
         "AMD64": cp3() + pp3(),
@@ -53,6 +53,24 @@ MPI_ABI = {
     "Linux": MPI_ABI_POSIX[:],
     "macOS": MPI_ABI_POSIX[:],
     "Windows": MPI_ABI_WINNT[:],
+}
+
+GHA_RUNNER = {
+    "Linux": {
+        "aarch64": "ubuntu-latest",
+        "ppc64le": "ubuntu-latest",
+        "x86_64": "ubuntu-latest",
+        None: "ubuntu-latest"
+    },
+    "macOS": {
+        "arm64": "macos-11",
+        "x86_64": "macos-11",
+        None: "macos-latest"
+    },
+    "Windows": {
+        "AMD64": "windows-2019",
+        None: "windows-latest"
+    },
 }
 
 os_arch_py = copy.deepcopy(OS_ARCH_PY)
@@ -81,14 +99,21 @@ if opts.py and not set(opts.py) & {"*", "all"}:
             os_arch_py[os][arch][:] = opts.py
 
 matrix_build = [
-    {"os": os, "arch": arch, "py": py, "mpi-abi": mpi_abi}
+    {
+        "os": os, "arch": arch,
+        "py": py, "mpi-abi": mpi_abi,
+        "runner": GHA_RUNNER[os][arch],
+    }
     for os in os_arch_py
     for arch in os_arch_py[os]
     for py in os_arch_py[os][arch]
     for mpi_abi in MPI_ABI[os]
 ]
 matrix_merge = [
-    {"os": os, "arch": arch}
+    {
+        "os": os, "arch": arch,
+        "runner": GHA_RUNNER[os][None],
+    }
     for os in os_arch_py
     for arch in os_arch_py[os]
 ]

@@ -113,7 +113,7 @@ for entry in builds:
                 if f"{mpiname}-{mpiversion}" == "openmpi-3.1":
                     continue
             if (py == "cp" and (x, y) == (3, 6)
-                and f"{mpiname}-{mpiversion}" == "openmpi-5.0"):
+                    and f"{mpiname}-{mpiversion}" == "openmpi-5.0"):
                 continue  # python=3.6 openmpi=5.0 cannot be solved
             row = {
                 "runner": runner,

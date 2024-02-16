@@ -90,9 +90,7 @@ jobs:
   build:
     if: ${{ needs.setup.outputs.matrix-build != '[]' }}
     needs: setup
-    runs-on: ${{ (matrix.os == 'Linux'   && 'ubuntu-latest') ||
-                 (matrix.os == 'macOS'   && 'macos-11'     ) ||
-                 (matrix.os == 'Windows' && 'windows-2019' ) }}
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
@@ -191,9 +189,7 @@ jobs:
   merge:
     if: ${{ needs.setup.outputs.matrix-merge != '[]' }}
     needs: [setup, build]
-    runs-on: ${{ (matrix.os == 'Linux'   && 'ubuntu-latest'  ) ||
-                 (matrix.os == 'macOS'   && 'macos-latest'   ) ||
-                 (matrix.os == 'Windows' && 'windows-latest' ) }}
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
