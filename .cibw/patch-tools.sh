@@ -1,12 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
-case $(uname) in
+case "$(uname)" in
     Linux)  toolname=auditwheel;;
     Darwin) toolname=delocate-wheel;;
 esac
 
-if [ $(uname) == Linux ] || [ $(uname) == Darwin ]; then
+if [ "$(uname)" == Linux ] || [ "$(uname)" == Darwin ]; then
     here=$(cd "$(dirname -- "$0")" && pwd -P)
     filename=$(command -v "$toolname")
     shebang=$(head -n 1 "$filename")
