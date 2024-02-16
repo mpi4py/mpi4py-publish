@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-case $(uname) in
+case "$(uname)" in
     Linux)
         ;;
     Darwin)

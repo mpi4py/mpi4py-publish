@@ -1,6 +1,7 @@
 import argparse
 import collections
 import copy
+import fnmatch
 import json
 
 parser = argparse.ArgumentParser()
@@ -96,7 +97,12 @@ if opts.os and not set(opts.os) & {"*", "all"}:
 if opts.py and not set(opts.py) & {"*", "all"}:
     for os in os_arch_py:
         for arch in os_arch_py[os]:
-            os_arch_py[os][arch][:] = opts.py
+            select = []
+            for pat in opts.py:
+                for py in fnmatch.filter(os_arch_py[os][arch], pat):
+                    if py not in select:
+                        select.append(py)
+            os_arch_py[os][arch][:] = select
 
 matrix_build = [
     {

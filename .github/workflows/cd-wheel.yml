@@ -183,8 +183,9 @@ jobs:
     - id: upload
       uses: actions/upload-artifact@v4
       with:
-        name: build-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.py }}-${{ matrix.mpi-abi }}
+        name: build-${{matrix.os}}-${{matrix.arch}}-${{strategy.job-index}}
         path: wheelhouse/*.whl
+        retention-days: 1
 
   merge:
     if: ${{ needs.setup.outputs.matrix-merge != '[]' }}
@@ -233,21 +234,24 @@ jobs:
     - id: merge
       run: python .cibw/merge-wheels.py wheelhouse dist
 
-    - id: sha256sum
+    - id: upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: wheel-${{ matrix.os }}-${{ matrix.arch }}
+        path: dist/*.whl
+
+    - id: report
       run: |
-        # sha256sum
-        test $(uname) == Darwin && sha256sum() { shasum -a 256 $@; } || true
+        # report
+        test "$(uname)" = Darwin && sha256sum() { shasum -a 256 $@; } || true
+        artifact='Artifact: <${{ steps.upload.outputs.artifact-url }}>'
+        echo $artifact     >> $GITHUB_STEP_SUMMARY
         echo '```'         >> $GITHUB_STEP_SUMMARY
         sha256sum -b *.whl >> $GITHUB_STEP_SUMMARY
         echo '```'         >> $GITHUB_STEP_SUMMARY
       shell: bash
       working-directory: dist
 
-    - id: upload
-      uses: actions/upload-artifact@v4
-      with:
-        name: wheel-${{ matrix.os }}-${{ matrix.arch }}
-        path: dist/*.whl
 
   test-setup:
     needs: [setup, merge]
