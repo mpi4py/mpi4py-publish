@@ -140,10 +140,11 @@ for (package, version, tags), variantlist in wheels.items():
                 extension.rename(extension.parent / filename)
                 print("OK", flush=True)
 
-    source = Path(__file__).parent / "mpi4py_mpiabi.py"
-    pycode = source.read_text(encoding="utf-8")
-    source = package_dir / "_mpiabi.py"
-    source.write_text(pycode, encoding="utf-8")
+    for py in ("py", "pyi"):
+        source = Path(__file__).parent / f"mpi4py_mpiabi.{py}"
+        pycode = source.read_text(encoding="utf-8")
+        source = package_dir / f"_mpiabi.{py}"
+        source.write_text(pycode, encoding="utf-8")
 
     source = package_dir / "__init__.py"
     with source.open("a", encoding="utf-8") as fh:
