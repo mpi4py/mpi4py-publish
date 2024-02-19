@@ -207,8 +207,8 @@ def _get_mpiabi():
             version, family = _get_mpiabi_from_string(string)
         else:
             version, family = _get_mpiabi_from_libmpi(libmpi)
-        _get_mpiabi.version = version
-        _get_mpiabi.family = family
+        _get_mpiabi.version = version  # pyright: ignore
+        _get_mpiabi.family = family  # pyright: ignore
     return version, family
 
 
@@ -322,6 +322,7 @@ def _set_windows_dll_path():  # noqa: C901
             ospath.append(entry)
     os.environ["PATH"] = os.path.pathsep.join(ospath)
 
-    if hasattr(os, "add_dll_directory"):
-        for entry in dllpath:
-            os.add_dll_directory(entry)
+    if os.name == "nt":
+        if hasattr(os, "add_dll_directory"):
+            for entry in dllpath:
+                os.add_dll_directory(entry)

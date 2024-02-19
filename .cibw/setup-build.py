@@ -99,9 +99,9 @@ if opts.py and not set(opts.py) & {"*", "all"}:
         for arch in os_arch_py[os]:
             select = []
             for pat in opts.py:
-                for py in fnmatch.filter(os_arch_py[os][arch], pat):
-                    if py not in select:
-                        select.append(py)
+                for xp in fnmatch.filter(os_arch_py[os][arch], pat):
+                    if xp not in select:
+                        select.append(xp)
             os_arch_py[os][arch][:] = select
 
 matrix_build = [
