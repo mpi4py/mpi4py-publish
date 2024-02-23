@@ -71,14 +71,17 @@ echo "needed:  $(echo "$needed"  | tr '\n' ' ')"
 test -z "$libs"
 test -z "$rpath"
 if [ "$(uname)" == Linux ]; then
+    libre='lib(c|dl|pthread|mpi)\.so'
     test -z "$runpath"
-    test -z "$(grep -vE 'lib(c|pthread|mpi)' <<< "$needed" || true)"
+    test -z "$(grep -vE "$libre" <<< "$needed" || true)"
 fi
 if [ "$(uname)" == Darwin ]; then
-    pth='(/opt/(homebrew|local)|/usr/local)/lib'
-    test -z "$(grep -vE "$pth" <<< "$runpath" || true)"
-    test -z "$(grep -vE 'lib(System|mpi|pmpi)' <<< "$needed" || true)"
+    pthre='(/opt/(homebrew|local)|/usr/local)/lib'
+    libre='lib(System|mpi|pmpi)\..*\.dylib'
+    test -z "$(grep -vE "$pthre" <<< "$runpath" || true)"
+    test -z "$(grep -vE "$libre" <<< "$needed"  || true)"
 fi
 if [[ "$(uname)" =~ NT ]]; then
-    test -z "$(grep -vE '(i|ms|mpi)\.dll' <<< "$needed" || true)"
+    libre='((i|ms)mpi)\.dll'
+    test -z "$(grep -vE "$libre" <<< "$needed"  || true)"
 fi

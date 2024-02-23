@@ -176,16 +176,16 @@ jobs:
           MSMPI_LIB64="$MSMPI_ROOT\\lib"
         CIBW_BEFORE_BUILD_WINDOWS:
 
-    - id: check
-      run: .cibw/check-wheels.sh wheelhouse
-      shell: bash
-
     - id: upload
       uses: actions/upload-artifact@v4
       with:
         name: build-${{matrix.os}}-${{matrix.arch}}-${{strategy.job-index}}
         path: wheelhouse/*.whl
         retention-days: 1
+
+    - id: check
+      run: .cibw/check-wheels.sh wheelhouse
+      shell: bash
 
   merge:
     if: ${{ needs.setup.outputs.matrix-merge != '[]' }}
