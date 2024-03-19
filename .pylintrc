@@ -1,5 +1,5 @@
 [MASTER]
 score = no
 recursive = yes
-ignore = auditwheel.py
+ignore = auditwheel.py,mpi4py_mpiabi.pyi
 ignore-patterns = .*-.*\.py
