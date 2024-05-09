@@ -144,7 +144,7 @@ def _dlopen_libmpi(libmpi=None):  # noqa: C901
     raise RuntimeError("\n".join(errors))
 
 
-_libmpi_rpath = []
+_libmpi_rpath = []  # type: list[str]
 
 
 def _get_mpiabi_from_libmpi(libmpi=None):
@@ -212,7 +212,7 @@ def _get_mpiabi():
     return version, family
 
 
-_registry = {}
+_registry = {}  # type: dict[str, dict[str, list[tuple[int, int]]]]
 
 
 def _register(module, mpiabi):
