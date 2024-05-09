@@ -270,17 +270,28 @@ def _install_finder():
 
 
 def _set_windows_dll_path():  # noqa: C901
-    i_mpi_root = os.environ.get("I_MPI_ROOT")
-    i_mpi_library_kind = (
+    impi_root = os.environ.get("I_MPI_ROOT")
+    impi_library_kind = (
         os.environ.get("I_MPI_LIBRARY_KIND") or
         os.environ.get("library_kind") or
         "release"
     )
-    i_mpi_ofi_library_internal = (
+    impi_ofi_library_internal = (
         os.environ.get("I_MPI_OFI_LIBRARY_INTERNAL", "").lower()
         not in ("0", "no", "off", "false", "disable")
     )
+    impi_ofi_library_path = (
+        ("opt", "mpi", "libfabric", "bin"),
+        ("libfabric", "bin"),
+        ("bin", "libfabric"),
+        ("libfabric",),
+    )
+
     msmpi_bin = os.environ.get("MSMPI_BIN")
+    if not msmpi_bin:
+        msmpi_root = os.environ.get("MSMPI_ROOT")
+        if msmpi_root:
+            msmpi_bin = os.path.join(msmpi_root, "bin")
 
     dllpath = []
 
@@ -292,15 +303,10 @@ def _set_windows_dll_path():  # noqa: C901
                 dllpath.append(path)
 
     def add_dllpath_impi(*rootdir):
-        if i_mpi_ofi_library_internal:
-            for subdir in (
-                ("opt", "mpi", "libfabric", "bin"),
-                ("libfabric", "bin"),
-                ("bin", "libfabric"),
-            ):
+        if impi_ofi_library_internal:
+            for subdir in impi_ofi_library_path:
                 add_dllpath(*rootdir, *subdir, dll="libfabric")
-        if i_mpi_library_kind:
-            add_dllpath(*rootdir, "bin", i_mpi_library_kind, dll="impi")
+        add_dllpath(*rootdir, "bin", impi_library_kind, dll="impi")
         add_dllpath(*rootdir, "bin", dll="impi")
 
     def add_dllpath_msmpi(*bindir):
@@ -309,10 +315,8 @@ def _set_windows_dll_path():  # noqa: C901
     for prefix in _site_prefixes():
         add_dllpath_impi(prefix, "Library")
         add_dllpath_msmpi(prefix, "Library", "bin")
-
-    if i_mpi_root:
-        add_dllpath_impi(i_mpi_root)
-
+    if impi_root:
+        add_dllpath_impi(impi_root)
     if msmpi_bin:
         add_dllpath_msmpi(msmpi_bin)
 
