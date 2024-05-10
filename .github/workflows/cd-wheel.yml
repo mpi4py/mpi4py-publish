@@ -398,7 +398,7 @@ jobs:
       uses: ./.github/actions/mpi4py-test-basic
       timeout-minutes: 2
       with:
-        mpiexec: ${{steps.user.outputs.mpiexec }}
+        mpiexec: ${{ steps.user.outputs.mpiexec }}
       env:
         PYTHONUSERBASE: ${{ runner.temp }}/user
 
@@ -428,7 +428,49 @@ jobs:
       timeout-minutes: 2
       with:
         python: ${{ steps.venv.outputs.python }}
-        mpiexec: ${{steps.venv.outputs.mpiexec }}
+        mpiexec: ${{ steps.venv.outputs.mpiexec }}
+
+    - run: python -m pip install --upgrade pip
+
+    - run: python -m pip install mpi4py --no-index --find-links=dist
+
+    - if: ${{ matrix.mpi == 'impi' && runner.os == 'Windows' }}
+      id: impi_old
+      shell: bash
+      run: |
+        package=intelmpi.redist.win-x64 version=2021.7.1.15761
+        nuget install $package -Version $version
+        mpiroot="$PWD/$package.$version/runtimes/win-x64/native"
+        mpiexec="$mpiroot/bin/mpiexec.exe"
+        echo "mpiroot=$(cygpath -u "$mpiroot")" >> "$GITHUB_OUTPUT"
+        echo "mpiexec=$(cygpath -u "$mpiexec")" >> "$GITHUB_OUTPUT"
+
+    - if: ${{ matrix.mpi == 'impi' && runner.os == 'Windows' }}
+      uses: ./.github/actions/mpi4py-test-basic
+      timeout-minutes: 2
+      with:
+        mpiexec: ${{ steps.impi_old.outputs.mpiexec }}
+      env:
+        I_MPI_ROOT: ${{ steps.impi_old.outputs.mpiroot }}
+
+    - if: ${{ matrix.mpi == 'impi' && runner.os == 'Windows' }}
+      id: impi
+      shell: bash
+      run: |
+        package=intelmpi.redist.win-x64 version=2021.12.1.6
+        nuget install $package -Version $version
+        mpiroot="$PWD/$package.$version/runtimes/win-x64/native"
+        mpiexec="$mpiroot/bin/mpiexec.exe"
+        echo "mpiroot=$(cygpath -u "$mpiroot")" >> "$GITHUB_OUTPUT"
+        echo "mpiexec=$(cygpath -u "$mpiexec")" >> "$GITHUB_OUTPUT"
+
+    - if: ${{ matrix.mpi == 'impi' && runner.os == 'Windows' }}
+      uses: ./.github/actions/mpi4py-test-basic
+      timeout-minutes: 2
+      with:
+        mpiexec: ${{ steps.impi.outputs.mpiexec }}
+      env:
+        I_MPI_ROOT: ${{ steps.impi.outputs.mpiroot }}
 
     - uses: mpi4py/setup-mpi@v1
       with:
@@ -436,10 +478,6 @@ jobs:
 
     - if: ${{ matrix.mpi == 'mpich' && runner.os == 'Linux' }}
       run: sudo ln -sr /usr/lib/$(arch)-linux-gnu/libmpi{ch,}.so.12
-
-    - run: python -m pip install --upgrade pip
-
-    - run: python -m pip install mpi4py --no-index --find-links=dist
 
     - uses: ./.github/actions/mpi4py-test-basic
       timeout-minutes: 2
