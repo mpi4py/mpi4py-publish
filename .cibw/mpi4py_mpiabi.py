@@ -320,13 +320,13 @@ def _set_windows_dll_path():  # noqa: C901
     if msmpi_bin:
         add_dllpath_msmpi(msmpi_bin)
 
-    ospath = os.environ["PATH"].split(os.path.pathsep)
-    for entry in dllpath:
-        if entry not in ospath:
-            ospath.append(entry)
-    os.environ["PATH"] = os.path.pathsep.join(ospath)
-
-    if os.name == "nt":
-        if hasattr(os, "add_dll_directory"):
-            for entry in dllpath:
-                os.add_dll_directory(entry)
+    # ospath = os.environ["PATH"].split(os.path.pathsep)
+    # for entry in dllpath:
+    #     if entry not in ospath:
+    #         ospath.append(entry)
+    # os.environ["PATH"] = os.path.pathsep.join(ospath)
+    #
+    # if os.name == "nt":
+    #     if hasattr(os, "add_dll_directory"):
+    #         for entry in dllpath:
+    #             os.add_dll_directory(entry)
