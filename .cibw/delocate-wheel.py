@@ -34,16 +34,5 @@ dyldpath.append("/opt/homebrew/lib")
 dyldpath.append("/opt/local/lib")
 os.environ[dyldname] = ":".join(dyldpath)
 
-ZIP_TIMESTAMP_MIN = 315532800  # 1980-01-01 00:00:00 UTC
-timestamp = os.environ.get("SOURCE_DATE_EPOCH")
-if timestamp is not None:
-    import delocate.tools
-    time = delocate.tools.time
-    timestamp = max(int(timestamp), ZIP_TIMESTAMP_MIN)
-    time_patch = type(time)("time")
-    time_patch.__dict__.update(time.__dict__)
-    time_patch.localtime = lambda _=None: time.localtime(timestamp)
-    delocate.tools.time = time_patch
-
 if __name__ == "__main__":
     sys.exit(mod.main())
