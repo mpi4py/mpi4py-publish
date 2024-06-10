@@ -136,7 +136,7 @@ jobs:
         platforms: all
 
     - id: build
-      uses: pypa/cibuildwheel@v2.18.1
+      uses: pypa/cibuildwheel@v2.19.0
       timeout-minutes: 45
       with:
         package-dir: mpi4py.git
