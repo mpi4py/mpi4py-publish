@@ -64,8 +64,8 @@ GHA_RUNNER = {
         None: "ubuntu-latest"
     },
     "macOS": {
-        "arm64": "macos-11",
-        "x86_64": "macos-11",
+        "arm64": "macos-12",
+        "x86_64": "macos-12",
         None: "macos-latest"
     },
     "Windows": {
