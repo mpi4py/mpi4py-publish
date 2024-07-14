@@ -326,11 +326,9 @@ jobs:
           pip
         condarc: |
           show_channel_urls: true
-          channel_priority: >-
-            ${{ matrix.mpi == 'impi_rt' && 'flexible' || 'strict' }}
+          channel_priority: strict
           channels:
             - conda-forge
-            - ${{ matrix.mpi == 'impi_rt' && 'intel' || 'nodefaults' }}
             - nodefaults
 
     - run: python -m pip install mpi4py --no-index --find-links=dist
