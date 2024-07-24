@@ -95,14 +95,13 @@ jobs:
         sha256sum -b *.tar.gz >> $GITHUB_STEP_SUMMARY
         sha256sum -b *.whl    >> $GITHUB_STEP_SUMMARY
         echo '```'            >> $GITHUB_STEP_SUMMARY
-      shell: bash
       working-directory: dist
 
     - name: Setup Micromamba
       uses: mamba-org/setup-micromamba@v1
       with:
         environment-name: ac
-        create-args: anaconda-client python=3.11
+        create-args: anaconda-client
 
     - name: Publish to Anaconda
       run:  |
