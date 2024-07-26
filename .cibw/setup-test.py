@@ -14,7 +14,7 @@ except IndexError:
 
 pattern1 = re.compile(
     r"(?:mpi4py)_"
-    r"(mpi(?:20|31|40))_(mpich|openmpi|msmpi|impi)-"
+    r"(mpi(?:20|31|40|41))_(mpich|openmpi|msmpi|impi)-"
     r"(?:\d+(?:\.\d+)*(?:\.dev\d*)?)-"
     r"(cp|pp)(\d)(\d+)-"
     r"(?:[_\w]+)-"
@@ -23,7 +23,7 @@ pattern1 = re.compile(
 pattern2 = re.compile(
     r"(?:mpi4py)-"
     r"(?:\d+(?:\.\d+)*(?:\.dev\d*)?)\+"
-    r"(mpi(?:20|31|40))\.(mpich|openmpi|msmpi|impi)-"
+    r"(mpi(?:20|31|40|41))\.(mpich|openmpi|msmpi|impi)-"
     r"(cp|pp)(\d)(\d+)-"
     r"(?:[_\w]+)-"
     r"(manylinux|macosx|win)_([_\w]+)"
@@ -45,6 +45,9 @@ mpimap_linux = {
     "mpi40-mpich": [
         ("mpich", ["4.0", "4.1"]),
     ],
+    "mpi41-mpich": [
+        ("mpich", ["4.2"]),
+    ],
 }
 mpimap_macos = {
     "mpi31-mpich": [
@@ -55,6 +58,9 @@ mpimap_macos = {
     ],
     "mpi40-mpich": [
         ("mpich", ["4.0", "4.1"]),
+    ],
+    "mpi41-mpich": [
+        ("mpich", ["4.2"]),
     ],
 }
 mpimap_windows = {

@@ -39,9 +39,12 @@ OS_ARCH_PY = {
 
 MPI_ABI_POSIX = [
     f"mpi{std}-{mpi}"
-    for std in (31, 40)
+    for std in (31, 40, 41)
     for mpi in ("mpich", "openmpi")
-    if (std, mpi) != (40, "openmpi")
+    if (std, mpi) not in (
+        (40, "openmpi"),
+        (41, "openmpi"),
+    )
 ]
 MPI_ABI_WINNT = [
     f"mpi{std}-{mpi}"
