@@ -105,6 +105,8 @@ runners = {
 matrix = []
 for entry in builds:
     osname, arch, mpiabi, py, (x, y) = entry
+    if (x, y) >= (3, 13):  # TODO: update for cp313
+        continue
     if (x, y) >= (3, 10) and py == "pp":  # TODO: update for pp310
         continue
     if osname == "Windows":
@@ -151,6 +153,8 @@ runners = {
 matrix = []
 for entry in builds:
     osname, arch, mpiabi, py, (x, y) = entry
+    if (x, y) >= (3, 13):  # TODO: update for cp313
+        continue
     if (x, y) >= (3, 10) and py == "pp":  # TODO: update for pp310
         continue
     std, _, mpi = mpiabi.partition("-")

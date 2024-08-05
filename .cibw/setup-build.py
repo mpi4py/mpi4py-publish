@@ -14,7 +14,7 @@ def py(py, x, y_min, y_max):
     return [f"{py}{x}{y}" for y in range(y_min, y_max + 1)]
 
 
-def cp3(y_min=6, y_max=12):
+def cp3(y_min=6, y_max=13):
     return py("cp", 3, y_min, y_max)
 
 
@@ -29,7 +29,7 @@ OS_ARCH_PY = {
         "x86_64": cp3() + pp3(),
     },
     "macOS": {
-        "arm64": cp3(8, 12),
+        "arm64": cp3(8),
         "x86_64": cp3() + pp3(),
     },
     "Windows": {

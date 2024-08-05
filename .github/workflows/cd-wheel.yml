@@ -22,7 +22,7 @@ on:  # yamllint disable-line rule:truthy
         required: false
         type: string
       python-tag:
-        description: "CPython/PyPy tag ({cp,pp}3{7..12})"
+        description: "CPython/PyPy tag ({cp,pp}3{7..13})"
         default: ''
         required: false
         type: string
@@ -59,7 +59,7 @@ on:  # yamllint disable-line rule:truthy
           - Windows
           - Windows-AMD64
       python-tag:
-        description: "CPython/PyPy tag ({cp,pp}3{7..12})"
+        description: "CPython/PyPy tag ({cp,pp}3{7..13})"
         default: ''
         required: false
         type: string
