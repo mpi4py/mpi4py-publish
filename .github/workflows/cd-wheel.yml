@@ -144,6 +144,7 @@ jobs:
       env:
         MPI4PY_LOCAL_VERSION: "${{ matrix.mpi-abi }}"
         CIBW_PROJECT_REQUIRES_PYTHON: ">=3.6"
+        CIBW_FREE_THREADED_SUPPORT: "true"
         CIBW_BUILD_FRONTEND: "build"
         CIBW_BUILD: "${{ matrix.py || '*' }}-*"
         CIBW_SKIP:  "${{ inputs.skip-tag }} *musllinux*"
