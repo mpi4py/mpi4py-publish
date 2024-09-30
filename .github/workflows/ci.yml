@@ -1,0 +1,26 @@
+name: ci
+
+permissions:
+  contents: read
+
+on:  # yamllint disable-line rule:truthy
+  pull_request:
+    branches:
+      - master
+
+jobs:
+
+  wheel-Linux:
+    uses: ./.github/workflows/cd-wheel.yml
+    with:
+      os-arch: Linux
+
+  wheel-macOS:
+    uses: ./.github/workflows/cd-wheel.yml
+    with:
+      os-arch: macOS
+
+  wheel-Windows:
+    uses: ./.github/workflows/cd-wheel.yml
+    with:
+      os-arch: Windows
