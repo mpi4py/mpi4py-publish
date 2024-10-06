@@ -158,11 +158,11 @@ for (package, version, tags), variantlist in wheels.items():
         for variant in variant_registry:
             for module in extensions:
                 fh.write(f"_mpiabi._register({module!r}, {variant!r})\n")
-        if tags[-1].startswith("win"):
-            fh.write(textwrap.dedent("""\
-            # Set Windows DLL search path
-            _mpiabi._set_windows_dll_path()
-            """))
+        # if tags[-1].startswith("win"):
+        #     fh.write(textwrap.dedent("""\
+        #     # Set Windows DLL search path
+        #     _mpiabi._set_windows_dll_path()
+        #     """))
 
     output_dir.mkdir(parents=True, exist_ok=True)
     wheel_pack.pack(root_dir, output_dir, None)
