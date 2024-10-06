@@ -35,7 +35,7 @@ Darwin-arm64-mpi31-openmpi)  MPI_VERSION=4.0;;
 *NT*-AMD64-mpi31-impi)
     MPI_CHANNEL=conda-forge
     MPI_PACKAGE=impi-devel
-    MPI_VERSION=2021.13.0
+    MPI_VERSION=2021.13.1
     MPI_ROOT=${MPI_ROOT:-~/mpi}
     ;;
 esac
