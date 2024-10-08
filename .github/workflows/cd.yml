@@ -98,7 +98,7 @@ jobs:
       working-directory: dist
 
     - name: Setup Micromamba
-      uses: mamba-org/setup-micromamba@v1
+      uses: mamba-org/setup-micromamba@v2
       with:
         environment-name: ac
         create-args: anaconda-client
