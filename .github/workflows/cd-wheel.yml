@@ -455,7 +455,7 @@ jobs:
       id: impi
       shell: bash
       run: |
-        package=intelmpi.redist.win-x64 version=2021.12.1.6
+        package=intelmpi.redist.win-x64 version=2021.13.1.766
         nuget install $package -Version $version
         mpiroot="$PWD/$package.$version/runtimes/win-x64/native"
         mpiexec="$mpiroot/bin/mpiexec.exe"
