@@ -135,6 +135,10 @@ jobs:
       with:
         platforms: all
 
+    - id: setup-uv
+      if:  ${{ runner.os != 'Linux' }}
+      run: ${{ runner.os == 'macOS' && 'brew' || 'choco' }} install uv
+
     - id: build
       uses: pypa/cibuildwheel@v2.21.3
       timeout-minutes: 45
@@ -144,7 +148,7 @@ jobs:
       env:
         MPI4PY_LOCAL_VERSION: "${{ matrix.mpi-abi }}"
         CIBW_PROJECT_REQUIRES_PYTHON: ">=3.6"
-        CIBW_BUILD_FRONTEND: "build"
+        CIBW_BUILD_FRONTEND: "build[uv]"
         CIBW_BUILD: "${{ matrix.py || '*' }}-*"
         CIBW_SKIP:  "${{ inputs.skip-tag }} *musllinux*"
         CIBW_ARCHS: "${{ matrix.arch }}"
