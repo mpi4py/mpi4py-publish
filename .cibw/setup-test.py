@@ -173,9 +173,6 @@ for entry in builds:
         if runner == "macos-13":
             if py == "cp" and (x, y) < (3, 8):
                 continue
-        if runner == "macos-12":
-            if py == "cp" and (x, y) < (3, 7):
-                continue
         for mpispec in mpispeclist:
             row = {
                 "runner": runner,

@@ -65,6 +65,7 @@ if [ "$MPI_PACKAGE" == mpich ]; then
     sed -i.orig -E 's/(with_wrapper_dl_type)=(r(un)?path)/\1=none/' "${files[@]}"
     sed -i.orig -E 's/(enable_wrapper_rpath)="(.*)"/\1="no"/' "${files[@]}"
     sed -i.orig "s%-Wl,-rpath,$MPI_ROOT/lib%%g" "${files[@]}"
+    sed -i.orig "s%-Wl,-commons,use_dylibs%%g" "${files[@]}"
 fi
 if [ "$MPI_PACKAGE" == openmpi ]; then
     files=("$envdir"/share/openmpi/mpi{cc,c++,fort}-wrapper-data.txt)
