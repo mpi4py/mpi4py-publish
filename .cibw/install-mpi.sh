@@ -56,6 +56,8 @@ micromamba create --yes --always-copy \
            --prefix "$envdir" \
            --relocate-prefix "$MPI_ROOT" \
            "$MPI_PACKAGE"="$MPI_VERSION"
+test "$(uname)-$MPIARCH-$MPI_ABI" = "Linux-x86_64-mpi41-mpich" && \
+micromamba remove --yes --force --prefix "$envdir" attr
 micromamba list --prefix "$envdir"
 
 echo "Fix MPI compiler wrappers"
