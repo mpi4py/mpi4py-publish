@@ -15,7 +15,8 @@ def py(py, x, y_min, y_max):
 
 
 def cp3(y_min=6, y_max=13):
-    return py("cp", 3, y_min, y_max)
+    cp313t = ["cp313t"] if y_max == 13 else []
+    return py("cp", 3, y_min, y_max) + cp313t
 
 
 def pp3(y_min=7, y_max=10):
