@@ -1,0 +1,13 @@
+# https://github.com/adrienverge/yamllint
+
+extends: default
+rules:
+  document-start: disable
+  colons:
+    max-spaces-before: 0
+    max-spaces-after: -1
+  indentation:
+    indent-sequences: whatever
+  line-length:
+    level: warning
+    max: 80
