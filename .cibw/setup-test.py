@@ -105,14 +105,9 @@ runners = {
 matrix = []
 for entry in builds:
     osname, arch, mpiabi, py, (x, y) = entry
-    if (x, y) >= (3, 13):  # TODO: update for cp313
-        continue
-    if (x, y) >= (3, 10) and py == "pp":  # TODO: update for pp310
-        continue
-    if osname == "Windows":
-        if py == "pp" and (x, y) == (3, 7):
-            continue  # mamba-org/setup-micromamba#133
     runner = runners[f"{osname}-{arch}"]
+    if py == "pp":
+        continue
     for mpiname, mpiversions in mpimap[osname][mpiabi]:
         for mpiversion in mpiversions:
             if f"{osname}-{arch}" == "macOS-arm64":
