@@ -153,16 +153,11 @@ runners = {
 matrix = []
 for entry in builds:
     osname, arch, mpiabi, py, (x, y) = entry
-    if (x, y) >= (3, 13):  # TODO: update for cp313
-        continue
-    if (x, y) >= (3, 10) and py == "pp":  # TODO: update for pp310
-        continue
     std, _, mpi = mpiabi.partition("-")
     mpispeclist = [mpi]
     if osname == "Linux" and mpi == "mpich":
         mpispeclist.append("impi")
-    pypy = "pypy" if py == "pp" else ""
-    pyspec = f"{pypy}{x}.{y}"
+    pyspec = f"{x}.{y}" if py == "cp" else f"pypy-{x}.{y}"
     for runner in runners[f"{osname}-{arch}"]:
         if runner == "ubuntu-22.04":
             if py == "cp" and (x, y) < (3, 7):
