@@ -26,15 +26,11 @@ def _site_prefixes():
             prefixes.append(user_base)
         if sys.base_exec_prefix in site.PREFIXES:
             system_base = sys.base_exec_prefix
-            if os.name == "posix":
-                if system_base != "/usr":
-                    prefixes.append(system_base)
-            else:
-                prefixes.append(system_base)
+            prefixes.append(system_base)
     return prefixes
 
 
-def _dlopen_rpath():
+def _dlopen_rpath():  # noqa: C901
     rpath = []
 
     def add_rpath(*directory):
@@ -44,7 +40,8 @@ def _dlopen_rpath():
 
     def add_rpath_prefix(prefix):
         if os.name == "posix":
-            add_rpath(prefix, "lib")
+            if prefix != "/usr":
+                add_rpath(prefix, "lib")
         else:
             add_rpath(prefix, "DLLs")
             add_rpath(prefix, "Library", "bin")
@@ -53,6 +50,24 @@ def _dlopen_rpath():
         add_rpath_prefix(prefix)
 
     add_rpath("")
+
+    if os.name == "nt":
+        impi_root = os.environ.get("I_MPI_ROOT")
+        impi_library_kind = (
+            os.environ.get("I_MPI_LIBRARY_KIND") or
+            os.environ.get("library_kind") or
+            "release"
+        )
+        msmpi_bin = os.environ.get("MSMPI_BIN")
+        if not msmpi_bin:
+            msmpi_root = os.environ.get("MSMPI_ROOT")
+            if msmpi_root:
+                msmpi_bin = os.path.join(msmpi_root, "bin")
+        if impi_root:
+            add_rpath(impi_root, "bin", impi_library_kind)
+            add_rpath(impi_root, "bin")
+        if msmpi_bin:
+            add_rpath(msmpi_bin)
 
     if sys.platform == "darwin":
         add_rpath("/usr/local/lib")
@@ -80,7 +95,30 @@ def _dlopen_libmpi(libmpi=None):  # noqa: C901
             if hasattr(lib, "I_MPI_Check_image_status"):
                 if os.path.basename(name) != name:
                     dlopen_impi_libfabric(os.path.dirname(name))
+        if name is not None and os.name == "nt":
+            if os.path.basename(name).lower() == "impi.dll":
+                if os.path.basename(name) != name:
+                    dlopen_impi_libfabric(os.path.dirname(name))
         return lib
+
+    def search_impi_libfabric(rootdir):
+        if sys.platform == "linux":
+            libdir = "lib"
+            suffix = ".so.1"
+        else:
+            libdir = "bin"
+            suffix = ".dll"
+        for subdir in (
+            ("opt", "mpi", "libfabric", libdir),
+            (libdir, "libfabric"),
+            ("libfabric", libdir),
+            ("libfabric"),
+        ):
+            ofi_libdir = os.path.join(rootdir, *subdir)
+            ofi_filename = os.path.join(ofi_libdir, f"libfabric{suffix}")
+            if os.path.isfile(ofi_filename):
+                return ofi_filename
+        return None
 
     def dlopen_impi_libfabric(libdir):
         ofi_internal = (
@@ -88,15 +126,22 @@ def _dlopen_libmpi(libmpi=None):  # noqa: C901
             in ("", "1", "y", "on", "yes", "true", "enable")
         )
         ofi_required = os.environ.get("I_MPI_FABRICS") != "shm"
-        ofi_library_path = os.path.join(libdir, "libfabric")
-        ofi_provider_path = os.path.join(ofi_library_path, "prov")
-        ofi_filename = os.path.join(ofi_library_path, "libfabric.so.1")
-        if ofi_internal and ofi_required and os.path.isfile(ofi_filename):
-            if "FI_PROVIDER_PATH" not in os.environ:
-                if os.path.isdir(ofi_provider_path):
-                    os.environ["FI_PROVIDER_PATH"] = ofi_provider_path
-            ct.CDLL(ofi_filename, mode)
-            _verbose_info(f"OFI library from {ofi_filename!r}")
+        if not (ofi_internal and ofi_required):
+            return None
+        rootdir = os.path.dirname(libdir)
+        if os.path.basename(rootdir).lower() in ("release", "debug"):
+            rootdir = os.path.dirname(rootdir)
+        ofi_filename = search_impi_libfabric(rootdir)
+        if ofi_filename is None:
+            return None
+        if "FI_PROVIDER_PATH" not in os.environ:
+            ofi_libdir = os.path.dirname(ofi_filename)
+            ofi_provider_path = os.path.join(ofi_libdir, "prov")
+            if os.path.isdir(ofi_provider_path):
+                os.environ["FI_PROVIDER_PATH"] = ofi_provider_path
+        lib = ct.CDLL(ofi_filename, mode)
+        _verbose_info(f"OFI library from {ofi_filename!r}")
+        return lib
 
     def libmpi_names():
         if os.name == "posix":
@@ -267,66 +312,3 @@ class _Finder:
 def _install_finder():
     if _Finder not in sys.meta_path:
         sys.meta_path.append(_Finder)
-
-
-def _set_windows_dll_path():  # noqa: C901
-    impi_root = os.environ.get("I_MPI_ROOT")
-    impi_library_kind = (
-        os.environ.get("I_MPI_LIBRARY_KIND") or
-        os.environ.get("library_kind") or
-        "release"
-    )
-    impi_ofi_library_internal = (
-        os.environ.get("I_MPI_OFI_LIBRARY_INTERNAL", "").lower()
-        not in ("0", "no", "off", "false", "disable")
-    )
-    impi_ofi_library_path = (
-        ("opt", "mpi", "libfabric", "bin"),
-        ("libfabric", "bin"),
-        ("bin", "libfabric"),
-        ("libfabric",),
-    )
-
-    msmpi_bin = os.environ.get("MSMPI_BIN")
-    if not msmpi_bin:
-        msmpi_root = os.environ.get("MSMPI_ROOT")
-        if msmpi_root:
-            msmpi_bin = os.path.join(msmpi_root, "bin")
-
-    dllpath = []
-
-    def add_dllpath(*directory, dll=""):
-        path = os.path.join(*directory)
-        if path not in dllpath:
-            filename = os.path.join(path, f"{dll}.dll")
-            if os.path.isfile(filename):
-                dllpath.append(path)
-
-    def add_dllpath_impi(*rootdir):
-        if impi_ofi_library_internal:
-            for subdir in impi_ofi_library_path:
-                add_dllpath(*rootdir, *subdir, dll="libfabric")
-        add_dllpath(*rootdir, "bin", impi_library_kind, dll="impi")
-        add_dllpath(*rootdir, "bin", dll="impi")
-
-    def add_dllpath_msmpi(*bindir):
-        add_dllpath(*bindir, dll="msmpi")
-
-    for prefix in _site_prefixes():
-        add_dllpath_impi(prefix, "Library")
-        add_dllpath_msmpi(prefix, "Library", "bin")
-    if impi_root:
-        add_dllpath_impi(impi_root)
-    if msmpi_bin:
-        add_dllpath_msmpi(msmpi_bin)
-
-    ospath = os.environ["PATH"].split(os.path.pathsep)
-    for entry in dllpath:
-        if entry not in ospath:
-            ospath.append(entry)
-    os.environ["PATH"] = os.path.pathsep.join(ospath)
-
-    if os.name == "nt":
-        if hasattr(os, "add_dll_directory"):
-            for entry in dllpath:
-                os.add_dll_directory(entry)
