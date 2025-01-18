@@ -76,10 +76,6 @@ mpimap = {
     "macOS": mpimap_macos,
     "Windows": mpimap_windows,
 }
-pymap = {
-    "cp": "",
-    "pp": " pypy",
-}
 
 builds = []
 for whl in sorted(glob.glob(os.path.join(wheelhouse, "*.whl"))):
@@ -90,6 +86,10 @@ for whl in sorted(glob.glob(os.path.join(wheelhouse, "*.whl"))):
     assert match is not None
     std, mpi, py, x, y, ostag, archtag = match.groups()
     osname, mpiabi, x, y = osmap[ostag], f"{std}-{mpi}", int(x), int(y)
+    if py == "cp" and (x, y) < (3, 8):
+        continue
+    if py == "pp":
+        continue
     for arch in ("x86_64", "AMD64", "arm64"):
         if arch.lower() in archtag.lower():
             builds.append((osname, arch, mpiabi, py, (x, y)))
@@ -97,7 +97,8 @@ builds = sorted(builds, key=lambda r: (r[0].lower(), *r[1:]))
 
 
 runners = {
-    "Linux-x86_64": "ubuntu-22.04",
+    "Linux-aarch64": "ubuntu-24.04",
+    "Linux-x86_64": "ubuntu-24.04",
     "macOS-arm64": "macos-14",
     "macOS-x86_64": "macos-13",
     "Windows-AMD64": "windows-2022",
@@ -106,23 +107,23 @@ matrix = []
 for entry in builds:
     osname, arch, mpiabi, py, (x, y) = entry
     runner = runners[f"{osname}-{arch}"]
-    if py == "pp":
-        continue
     for mpiname, mpiversions in mpimap[osname][mpiabi]:
         for mpiversion in mpiversions:
+            if f"{osname}-{arch}" == "Linux-aarch64":
+                if mpiname == "impi_rt":
+                    continue
+                if f"{mpiname}-{mpiversion}" == "openmpi-3.1":
+                    continue
             if f"{osname}-{arch}" == "macOS-arm64":
                 if f"{mpiname}-{mpiversion}" == "mpich-3.2":
                     continue
                 if f"{mpiname}-{mpiversion}" == "openmpi-3.1":
                     continue
-            if (py == "cp" and (x, y) == (3, 6)
-                    and f"{mpiname}-{mpiversion}" == "openmpi-5.0"):
-                continue  # python=3.6 openmpi=5.0 cannot be solved
             row = {
                 "runner": runner,
                 "mpi": mpiname,
                 "mpi-version": mpiversion,
-                "py": f"{x}.{y}{pymap[py]}",
+                "py": f"{x}.{y}",
                 "arch": arch,
             }
             matrix.append(row)
@@ -131,8 +132,8 @@ print(f"matrix-test-cf={json.dumps(matrix)}")
 
 runners = {
     "Linux-x86_64": [
-        "ubuntu-20.04",
         "ubuntu-22.04",
+        "ubuntu-24.04",
     ],
     "macOS-arm64": [
         "macos-14",
@@ -150,24 +151,14 @@ for entry in builds:
     osname, arch, mpiabi, py, (x, y) = entry
     std, _, mpi = mpiabi.partition("-")
     mpispeclist = [mpi]
-    if osname == "Linux" and mpi == "mpich":
+    if f"{osname}-{arch}" == "Linux-x86_64" and mpi == "mpich":
         mpispeclist.append("impi")
-    pyspec = f"{x}.{y}" if py == "cp" else f"pypy-{x}.{y}"
     for runner in runners[f"{osname}-{arch}"]:
-        if runner == "ubuntu-22.04":
-            if py == "cp" and (x, y) < (3, 7):
-                continue
-        if runner == "macos-14":
-            if py == "cp" and (x, y) < (3, 10):
-                continue
-        if runner == "macos-13":
-            if py == "cp" and (x, y) < (3, 8):
-                continue
         for mpispec in mpispeclist:
             row = {
                 "runner": runner,
                 "mpi": mpispec,
-                "py": pyspec,
+                "py": f"{x}.{y}",
                 "arch": arch,
             }
             if row not in matrix:
