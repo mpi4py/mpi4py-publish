@@ -479,7 +479,10 @@ jobs:
         mpi: ${{ matrix.mpi }}
 
     - if: ${{ matrix.mpi == 'mpich' && runner.os == 'Linux' }}
-      run: sudo ln -sr /usr/lib/$(arch)-linux-gnu/libmpi{ch,}.so.12
+      run: |
+        # /usr/lib/$(arch)-linux-gnu/libmpi.so.12
+        test -f /usr/lib/$(arch)-linux-gnu/libmpi.so.12 || \
+        sudo ln -sr /usr/lib/$(arch)-linux-gnu/libmpi{ch,}.so.12
 
     - uses: ./.github/actions/mpi4py-test-basic
       timeout-minutes: 2

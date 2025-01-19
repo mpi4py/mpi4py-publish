@@ -58,9 +58,11 @@ dynamic linker is able to find at runtime the MPI shared library file
 On Debian/Ubuntu systems, Open MPI is the default MPI implementation and most
 of the MPI-based applications and libraries provided by the distribution depend
 on Open MPI. Nonetheless, MPICH is also available to users for installation.
-However, due to legacy reasons, the ABI is slightly broken: the MPI shared
-library file is named `libmpich.so.12` instead of `libmpi.so.12` as required by
-the [MPICH ABI Compatibility Initiative](https://www.mpich.org/abi/).
+
+In Ubuntu 22.04 and older, due to legacy reasons, the MPICH ABI is slightly
+broken: the MPI shared library file is named `libmpich.so.12` instead of
+`libmpi.so.12` as required by the [MPICH ABI Compatibility
+Initiative](https://www.mpich.org/abi/).
 
 Users without `sudo` access can workaround this issue creating a symbolic link
 anywhere in their home directory and appending to `LD_LIBRARY_PATH`.
