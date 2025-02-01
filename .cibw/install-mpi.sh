@@ -10,7 +10,7 @@ MPI_CHANNEL=conda-forge
 MPI_PACKAGE=${MPI_ABI#*-}
 MPI_VERSION="*.*"
 case "$(uname)"-"$MPIARCH"-"$MPI_ABI" in
-# Linux x86_64/aarch64/ppc64le
+# Linux x86_64/aarch64
 Linux-*-mpi41-mpich)         MPI_VERSION=4.2;; # >= 4.2
 Linux-*-mpi40-mpich)         MPI_VERSION=4.1;; # >= 4.0
 Linux-*-mpi31-mpich)         MPI_VERSION=3.4;; # >= 3.2

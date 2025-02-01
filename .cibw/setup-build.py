@@ -25,7 +25,6 @@ def pp3(y_min=7, y_max=10):
 OS_ARCH_PY = {
     "Linux": {
         "aarch64": cp3() + pp3(),
-        "ppc64le": cp3(),
         "x86_64": cp3() + pp3(),
     },
     "macOS": {
@@ -62,7 +61,6 @@ MPI_ABI = {
 GHA_RUNNER = {
     "Linux": {
         "aarch64": "ubuntu-latest",
-        "ppc64le": "ubuntu-latest",
         "x86_64": "ubuntu-latest",
         None: "ubuntu-latest"
     },

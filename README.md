@@ -4,7 +4,7 @@ This repository builds and publishes [mpi4py](https://github.com/mpi4py/mpi4py)
 Python wheels able to run in a variety of
 
 - operating systems: *Linux*, *macOS*, *Windows*;
-- processor architectures: *AMD64*, *ARM64*, *PPC64*;
+- processor architectures: *AMD64*, *ARM64*;
 - MPI implementations: *MPICH*, *Open MPI*, *MVAPICH*,
   *Intel MPI*, *HPE Cray MPICH*, *Microsoft MPI*;
 - Python implementations: *CPython*, *PyPy*.
@@ -36,7 +36,7 @@ module files, or customized user builds.
 >    --extra-index-url https://pypi.anaconda.org/mpi4py/simple
 > ```
 
-## Linux (`x86_64`, `aarch64`, `ppc64le`):
+## Linux (`x86_64`, `aarch64`):
 
 The Linux wheels require
 
@@ -69,7 +69,7 @@ anywhere in their home directory and appending to `LD_LIBRARY_PATH`.
 
 ```sh
 mkdir -p ~/.local/lib
-multiarch=$(arch | sed s/^ppc/powerpc/)-linux-gnu
+multiarch=$(arch)-linux-gnu
 ln -s /usr/lib/$multiarch/libmpich.so.12 ~/.local/lib/libmpi.so.12
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:~/.local/lib
 ```
@@ -77,7 +77,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:~/.local/lib
 A system-wide fix for all users requires `sudo` access:
 
 ```sh
-multiarch=$(arch | sed s/^ppc/powerpc/)-linux-gnu
+multiarch=$(arch)-linux-gnu
 sudo ln -sr /usr/lib/$multiarch/libmpi{ch,}.so.12
 ```
 

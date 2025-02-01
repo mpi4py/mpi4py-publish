@@ -52,7 +52,6 @@ on:  # yamllint disable-line rule:truthy
           - Linux
           - Linux-x86_64
           - Linux-aarch64
-          - Linux-ppc64le
           - macOS
           - macOS-x86_64
           - macOS-arm64
