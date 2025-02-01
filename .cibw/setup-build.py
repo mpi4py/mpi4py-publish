@@ -60,8 +60,8 @@ MPI_ABI = {
 
 GHA_RUNNER = {
     "Linux": {
-        "aarch64": "ubuntu-latest",
-        "x86_64": "ubuntu-latest",
+        "aarch64": "ubuntu-24.04-arm",
+        "x86_64": "ubuntu-24.04",
         None: "ubuntu-latest"
     },
     "macOS": {

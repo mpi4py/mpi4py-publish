@@ -128,12 +128,6 @@ jobs:
       shell: bash
       working-directory: mpi4py.git
 
-    - id: setup-qemu
-      if: ${{ runner.os == 'Linux' }}
-      uses: docker/setup-qemu-action@v3
-      with:
-        platforms: all
-
     - id: setup-uv
       if:  ${{ runner.os != 'Linux' }}
       run: ${{ runner.os == 'macOS' && 'brew' || 'choco' }} install uv
@@ -264,6 +258,12 @@ jobs:
       matrix-test-gh: ${{ steps.setup.outputs.matrix-test-gh }}
     steps:
     - uses: actions/checkout@v4
+    - if: ${{ contains(needs.setup.outputs.os-arch-list, '"Linux-aarch64"') }}
+      uses: actions/download-artifact@v4
+      with:
+        path: wheelhouse
+        pattern: build-Linux-aarch64-*
+        merge-multiple: true
     - if: ${{ contains(needs.setup.outputs.os-arch-list, '"Linux-x86_64"') }}
       uses: actions/download-artifact@v4
       with:

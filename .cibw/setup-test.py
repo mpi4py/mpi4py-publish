@@ -90,14 +90,14 @@ for whl in sorted(glob.glob(os.path.join(wheelhouse, "*.whl"))):
         continue
     if py == "pp":
         continue
-    for arch in ("x86_64", "AMD64", "arm64"):
+    for arch in ("x86_64", "AMD64", "arm64", "aarch64"):
         if arch.lower() in archtag.lower():
             builds.append((osname, arch, mpiabi, py, (x, y)))
 builds = sorted(builds, key=lambda r: (r[0].lower(), *r[1:]))
 
 
 runners = {
-    "Linux-aarch64": "ubuntu-24.04",
+    "Linux-aarch64": "ubuntu-24.04-arm",
     "Linux-x86_64": "ubuntu-24.04",
     "macOS-arm64": "macos-14",
     "macOS-x86_64": "macos-13",
@@ -131,6 +131,10 @@ print(f"matrix-test-cf={json.dumps(matrix)}")
 
 
 runners = {
+    "Linux-aarch64": [
+        "ubuntu-22.04-arm",
+        "ubuntu-24.04-arm",
+    ],
     "Linux-x86_64": [
         "ubuntu-22.04",
         "ubuntu-24.04",
