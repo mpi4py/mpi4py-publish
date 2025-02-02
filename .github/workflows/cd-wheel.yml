@@ -23,7 +23,7 @@ on:  # yamllint disable-line rule:truthy
         type: string
       python-tag:
         description: "CPython/PyPy tag ({cp,pp}3{7..13})"
-        default: ''
+        default: 'cp*'
         required: false
         type: string
       skip-tag:
@@ -58,7 +58,7 @@ on:  # yamllint disable-line rule:truthy
           - Windows
           - Windows-AMD64
       python-tag:
-        description: "CPython/PyPy tag ({cp,pp}3{7..13})"
+        description: "CPython/PyPy tag ({cp,pp}3{8..13})"
         default: ''
         required: false
         type: string
@@ -134,7 +134,7 @@ jobs:
 
     - id: build
       uses: pypa/cibuildwheel@v2.22.0
-      timeout-minutes: 45
+      timeout-minutes: 5
       with:
         package-dir: mpi4py.git
         output-dir:  wheelhouse
