@@ -140,7 +140,7 @@ jobs:
         output-dir:  wheelhouse
       env:
         MPI4PY_LOCAL_VERSION: "${{ matrix.mpi-abi }}"
-        CIBW_PROJECT_REQUIRES_PYTHON: ">=3.6"
+        CIBW_PROJECT_REQUIRES_PYTHON: ">=3.8"
         CIBW_BUILD_FRONTEND: "build[uv]"
         CIBW_BUILD: "${{ matrix.py || '*' }}-*"
         CIBW_SKIP:  "${{ inputs.skip-tag }} *musllinux*"
@@ -152,15 +152,14 @@ jobs:
           bash {project}/.cibw/patch-tools.sh
         CIBW_TEST_COMMAND: >-
           bash {project}/.cibw/run-tests.sh
-        CIBW_TEST_SKIP: "*-macosx_arm64"
         CIBW_ENVIRONMENT_PASS_LINUX: >-
           MPI4PY_LOCAL_VERSION
           MPI4PY_DIST_SUFFIX
           SOURCE_DATE_EPOCH
         CIBW_ENVIRONMENT_LINUX: >-
-          CFLAGS="-g0 -O"
+          CFLAGS="-g0 -Os"
         CIBW_ENVIRONMENT_MACOS: >-
-          CFLAGS="-g0 -O"
+          CFLAGS="-g0 -Os"
           LDFLAGS="-Wl,-headerpad_max_install_names"
           LDFLAGS="$LDFLAGS -Wl,-rpath,/usr/local/lib"
           LDFLAGS="$LDFLAGS -Wl,-rpath,/opt/homebrew/lib"
