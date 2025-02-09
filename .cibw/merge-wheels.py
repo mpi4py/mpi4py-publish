@@ -99,9 +99,10 @@ for (package, version, tags), variantlist in wheels.items():
                 if libdir.exists():
                     libdir.rmdir()
 
-            mpipth = root_dir / "mpi.pth"
-            if mpipth.exists():
-                mpipth.unlink()
+            for mpipth in ("_mpi_dll_path.pth", "mpi.pth"):
+                mpipth = root_dir / mpipth
+                if mpipth.exists():
+                    mpipth.unlink()
 
             record = distinfo_dir / "RECORD"
             record.unlink()
@@ -145,6 +146,11 @@ for (package, version, tags), variantlist in wheels.items():
         pycode = source.read_text(encoding="utf-8")
         source = package_dir / f"_mpiabi.{py}"
         source.write_text(pycode, encoding="utf-8")
+    if tags[-1].startswith("win"):
+        source = Path(__file__).parent / "mpi_dll_path.py"
+        pycode = source.read_text(encoding="utf-8")
+        source = package_dir.parent / "_mpi_dll_path.py"
+        source.write_text(pycode, encoding="utf-8")
 
     source = package_dir / "__init__.py"
     with source.open("a", encoding="utf-8") as fh:
@@ -161,7 +167,7 @@ for (package, version, tags), variantlist in wheels.items():
         if tags[-1].startswith("win"):
             fh.write(textwrap.dedent("""\
             # Set Windows DLL search path
-            _mpiabi._set_windows_dll_path()
+            __import__('_mpi_dll_path').install()
             """))
 
     output_dir.mkdir(parents=True, exist_ok=True)
