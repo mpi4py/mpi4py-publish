@@ -59,7 +59,7 @@ on:  # yamllint disable-line rule:truthy
           - Windows-AMD64
       python-tag:
         description: "CPython/PyPy tag ({cp,pp}3{8..13})"
-        default: ''
+        default: 'cp*'
         required: false
         type: string
       skip-tag:
