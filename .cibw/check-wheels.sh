@@ -44,7 +44,7 @@ if [[ "$(uname)" =~ NT ]]; then
     mods=("$tempdir"/mpi4py*win*.dir/mpi4py/MPI.*.pyd)
     for m in "${mods[@]}"; do cp "$m" "$m.dll"; done
     mods=("$tempdir"/mpi4py*win*.dir/mpi4py/MPI.*.dll)
-    out="$(mktemp -d)"/out
+    out="$(mktemp -d)"/dlldeps.txt
     for m in "${mods[@]}"; do
         ldd "$m" | \
             grep -v "$(basename "$m")" | \
@@ -53,14 +53,16 @@ if [[ "$(uname)" =~ NT ]]; then
     sys='/[a-z]/Windows/System32/'
     win='kernel.*\.dll\|ntdll\.dll'
     api='api-ms-win-crt-.*\.dll'
+    api+='\|advapi32\.dll\|bcrypt\.dll\|rpcrt4\.dll'
+    api+='\|sechost\.dll\|version\.dll\|ws2_32\.dll'
     crt='msvcrt\.dll\|ucrtbase\.dll\|vcruntime.*\.dll'
     cpy='python.*\.dll'
     ppy='libpypy.*\.dll'
     needed=$(\
        (grep -v -i \
              -e "$sys" -e "$win" -e "$api" \
-             -e "$crt" -e "$cpy"  e "$ppy" \
-             out.txt || true) | sort -f | uniq)
+             -e "$crt" -e "$cpy" -e "$ppy" \
+             "$out" || true) | sort -f | uniq)
 fi
 
 echo "libs:    $(echo "$libs"    | tr '\n' ' ')"
