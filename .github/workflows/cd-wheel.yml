@@ -49,12 +49,13 @@ on:  # yamllint disable-line rule:truthy
         required: true
         type: choice
         options:
+          - all
           - Linux
-          - Linux-x86_64
           - Linux-aarch64
+          - Linux-x86_64
           - macOS
-          - macOS-x86_64
           - macOS-arm64
+          - macOS-x86_64
           - Windows
           - Windows-AMD64
       python-tag:
@@ -75,13 +76,13 @@ jobs:
     outputs:
       matrix-build: ${{ steps.setup.outputs.matrix-build }}
       matrix-merge: ${{ steps.setup.outputs.matrix-merge }}
-      os-arch-list: ${{ steps.setup.outputs.os-arch-list }}
+      matrix-test:  ${{ steps.setup.outputs.matrix-test  }}
     steps:
     - uses: actions/checkout@v4
     - id: setup
       run: |
         # build matrix
-        python -u .cibw/setup-build.py \
+        python -u .cibw/setup-matrix.py \
           --os ${{ inputs.os-arch }} \
           --py ${{ inputs.python-tag }} \
           >> "$GITHUB_OUTPUT"
@@ -154,7 +155,6 @@ jobs:
           bash {project}/.cibw/run-tests.sh
         CIBW_ENVIRONMENT_PASS_LINUX: >-
           MPI4PY_LOCAL_VERSION
-          MPI4PY_DIST_SUFFIX
           SOURCE_DATE_EPOCH
         CIBW_ENVIRONMENT_LINUX: >-
           CFLAGS="-g0 -Os"
@@ -175,7 +175,7 @@ jobs:
     - id: upload
       uses: actions/upload-artifact@v4
       with:
-        name: build-${{matrix.os}}-${{matrix.arch}}-${{strategy.job-index}}
+        name: build-${{runner.os}}-${{matrix.arch}}-${{strategy.job-index}}
         path: wheelhouse/*.whl
         retention-days: 1
 
@@ -233,7 +233,7 @@ jobs:
     - id: upload
       uses: actions/upload-artifact@v4
       with:
-        name: wheel-${{ matrix.os }}-${{ matrix.arch }}
+        name: wheel-${{ runner.os }}-${{ matrix.arch }}
         path: dist/*.whl
 
     - id: report
@@ -248,60 +248,17 @@ jobs:
       shell: bash
       working-directory: dist
 
-
-  test-setup:
+  test:
+    if: ${{ needs.setup.outputs.matrix-test != '[]' }}
     needs: [setup, merge]
-    runs-on: 'ubuntu-latest'
-    outputs:
-      matrix-test-cf: ${{ steps.setup.outputs.matrix-test-cf }}
-      matrix-test-gh: ${{ steps.setup.outputs.matrix-test-gh }}
-    steps:
-    - uses: actions/checkout@v4
-    - if: ${{ contains(needs.setup.outputs.os-arch-list, '"Linux-aarch64"') }}
-      uses: actions/download-artifact@v4
-      with:
-        path: wheelhouse
-        pattern: build-Linux-aarch64-*
-        merge-multiple: true
-    - if: ${{ contains(needs.setup.outputs.os-arch-list, '"Linux-x86_64"') }}
-      uses: actions/download-artifact@v4
-      with:
-        path: wheelhouse
-        pattern: build-Linux-x86_64-*
-        merge-multiple: true
-    - if: ${{ contains(needs.setup.outputs.os-arch-list, '"macOS-arm64"') }}
-      uses: actions/download-artifact@v4
-      with:
-        path: wheelhouse
-        pattern: build-macOS-arm64-*
-        merge-multiple: true
-    - if: ${{ contains(needs.setup.outputs.os-arch-list, '"macOS-x86_64"') }}
-      uses: actions/download-artifact@v4
-      with:
-        path: wheelhouse
-        pattern: build-macOS-x86_64-*
-        merge-multiple: true
-    - if: ${{ contains(needs.setup.outputs.os-arch-list, '"Windows-AMD64"') }}
-      uses: actions/download-artifact@v4
-      with:
-        path: wheelhouse
-        pattern: build-Windows-AMD64-*
-        merge-multiple: true
-    - id: setup
-      run: python -u .cibw/setup-test.py wheelhouse >> "$GITHUB_OUTPUT"
-
-  test-cf:
-    if: ${{ needs.test-setup.outputs.matrix-test-cf != '[]' }}
-    needs: test-setup
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(needs.test-setup.outputs.matrix-test-cf) }}
-
+        include: ${{ fromJSON(needs.setup.outputs.matrix-test) }}
     defaults:
       run:
-        shell: bash -el {0}
+        shell: bash
 
     steps:
 
@@ -314,7 +271,7 @@ jobs:
     - uses: actions/download-artifact@v4
       with:
         path: dist
-        pattern: wheel-${{ runner.os }}-*
+        pattern: wheel-${{ runner.os }}-${{ matrix.arch }}
         merge-multiple: true
 
     - uses: mamba-org/setup-micromamba@v2
@@ -323,7 +280,7 @@ jobs:
         post-cleanup: none
         environment-name: test
         create-args: >-
-          ${{ matrix.mpi }}=${{ matrix.mpi-version }}
+          ${{ matrix.mpi == 'impi' && 'impi_rt' || matrix.mpi }}
           python=${{ matrix.py }}
           pip
         condarc: |
@@ -333,53 +290,37 @@ jobs:
             - conda-forge
             - nodefaults
 
-    - run: python -m pip install mpi4py --no-index --find-links=dist
+    - name: Install mpi4py in conda environment
+      run: python -m pip install mpi4py --no-index --find-links=dist
+      shell: bash -el {0}
 
-    - uses: ./.github/actions/mpi4py-test-basic
+    - name: Test mpi4py with conda-forge/${{ matrix.mpi }}
+      run: .cibw/run-tests-mpi.sh
+      shell: bash -el {0}
       timeout-minutes: 2
-      with:
-        shell: bash -el {0}
 
-    - if: ${{ matrix.mpi == 'mpich' || matrix.mpi == 'openmpi' }}
-      uses: ./.github/actions/mpi4py-test-basic
+    - name: Test setenv MPI4PY_MPIABI=${{ matrix.mpi }}
+      run: .cibw/run-tests-mpi.sh
+      shell: bash -el {0}
       timeout-minutes: 2
       env:
-        MPI4PY_MPIABI: mpi31-${{ matrix.mpi }}
-      with:
-        shell: bash -el {0}
+        MPI4PY_MPIABI: ${{ matrix.mpi }}
 
-  test-gh:
-    if: ${{ needs.test-setup.outputs.matrix-test-gh != '[]' }}
-    needs: test-setup
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include: ${{ fromJSON(needs.test-setup.outputs.matrix-test-gh) }}
+    - name: Test mpi4py with multiple conda-forge/${{ matrix.mpi }} versions
+      run: .cibw/run-tests-conda.sh ${{ matrix.mpi }}
+      shell: bash -el {0}
+      timeout-minutes: 2
 
-    steps:
-
-    - name: Configure hostname
-      run:  echo 127.0.0.1 `hostname` | sudo tee -a /etc/hosts > /dev/null
-      if:   runner.os == 'Linux' || runner.os == 'macOS'
-
-    - uses: actions/checkout@v4
-
-    - uses: actions/download-artifact@v4
-      with:
-        path: dist
-        pattern: wheel-${{ runner.os }}-*
-        merge-multiple: true
-
-    - uses:  actions/setup-python@v5
+    - uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.py }}
 
     - if: ${{ matrix.mpi == 'impi' }}
+      name: Install mpi4py and MPI in user site-packages
       id: user
-      shell: bash
       run: |
         userdir=$(python -m site --user-base)
+        package=${{ matrix.mpi == 'impi' && 'impi_rt' || matrix.mpi }}
         if [[ $(uname) =~ NT ]]; then
             userdir=$(cygpath -u "$userdir")
             mpiexec="$userdir/Library/bin/mpiexec.exe"
@@ -388,25 +329,26 @@ jobs:
         fi
         echo "mpiexec=$mpiexec" >> "$GITHUB_OUTPUT"
         set -x
-        python -m pip install --user --upgrade pip
-        python -m pip install --user impi-rt
+        python -m pip install --upgrade pip
+        python -m pip install --user $package
         python -m pip install --user mpi4py --no-index --find-links=dist
       env:
         PYTHONUSERBASE: ${{ runner.temp }}/user
 
     - if: ${{ matrix.mpi == 'impi' }}
-      uses: ./.github/actions/mpi4py-test-basic
+      name: Test mpi4py and MPI from user site-packages
+      run: .cibw/run-tests-mpi.sh
       timeout-minutes: 2
-      with:
-        mpiexec: ${{ steps.user.outputs.mpiexec }}
       env:
+        MPIEXEC: ${{ steps.user.outputs.mpiexec }}
         PYTHONUSERBASE: ${{ runner.temp }}/user
 
     - if: ${{ matrix.mpi == 'impi' }}
+      name: Install mpi4py and MPI in virtual environment
       id: venv
-      shell: bash
       run: |
         venvdir="${{ runner.temp }}/venv"
+        package=${{ matrix.mpi == 'impi' && 'impi_rt' || matrix.mpi }}
         python -m venv "$venvdir"
         if [[ $(uname) =~ NT ]]; then
             venvdir=$(cygpath -u "$venvdir")
@@ -420,23 +362,26 @@ jobs:
         echo "mpiexec=$mpiexec" >> "$GITHUB_OUTPUT"
         set -x
         $python -m pip install --upgrade pip
-        $python -m pip install impi-rt
+        $python -m pip install $package
         $python -m pip install mpi4py --no-index --find-links=dist
 
     - if: ${{ matrix.mpi == 'impi' }}
-      uses: ./.github/actions/mpi4py-test-basic
+      name: Test mpi4py and MPI from virtual environment
+      run: .cibw/run-tests-mpi.sh
       timeout-minutes: 2
-      with:
-        python: ${{ steps.venv.outputs.python }}
-        mpiexec: ${{ steps.venv.outputs.mpiexec }}
+      env:
+        PYTHON: ${{ steps.venv.outputs.python }}
+        MPIEXEC: ${{ steps.venv.outputs.mpiexec }}
 
-    - run: python -m pip install --upgrade pip
+    - name: Upgrade pip in global site-packages
+      run: python -m pip install --upgrade pip
 
-    - run: python -m pip install mpi4py --no-index --find-links=dist
+    - name: Install mpi4py in global site-packages
+      run: python -m pip install mpi4py --no-index --find-links=dist
 
     - if: ${{ matrix.mpi == 'impi' && runner.os == 'Windows' }}
+      name: Install MPI in local directory
       id: impi_old
-      shell: bash
       run: |
         package=intelmpi.redist.win-x64 version=2021.7.1.15761
         nuget install $package -Version $version
@@ -446,18 +391,18 @@ jobs:
         echo "mpiexec=$(cygpath -u "$mpiexec")" >> "$GITHUB_OUTPUT"
 
     - if: ${{ matrix.mpi == 'impi' && runner.os == 'Windows' }}
-      uses: ./.github/actions/mpi4py-test-basic
+      name: Test mpi4py with MPI from local directory
+      run: .cibw/run-tests-mpi.sh
       timeout-minutes: 2
-      with:
-        mpiexec: ${{ steps.impi_old.outputs.mpiexec }}
       env:
+        MPIEXEC: ${{ steps.impi_old.outputs.mpiexec }}
         I_MPI_ROOT: ${{ steps.impi_old.outputs.mpiroot }}
 
     - if: ${{ matrix.mpi == 'impi' && runner.os == 'Windows' }}
+      name: Install MPI in local directory
       id: impi
-      shell: bash
       run: |
-        package=intelmpi.redist.win-x64 version=2021.13.1.766
+        package=intelmpi.redist.win-x64 version=2021.14.2.900
         nuget install $package -Version $version
         mpiroot="$PWD/$package.$version/runtimes/win-x64/native"
         mpiexec="$mpiroot/bin/mpiexec.exe"
@@ -465,28 +410,24 @@ jobs:
         echo "mpiexec=$(cygpath -u "$mpiexec")" >> "$GITHUB_OUTPUT"
 
     - if: ${{ matrix.mpi == 'impi' && runner.os == 'Windows' }}
-      uses: ./.github/actions/mpi4py-test-basic
+      name: Test mpi4py with MPI from local directory
+      run: .cibw/run-tests-mpi.sh
       timeout-minutes: 2
-      with:
-        mpiexec: ${{ steps.impi.outputs.mpiexec }}
       env:
+        MPIEXEC: ${{ steps.impi.outputs.mpiexec }}
         I_MPI_ROOT: ${{ steps.impi.outputs.mpiroot }}
 
-    - uses: mpi4py/setup-mpi@v1
+    - name: Install system MPI
+      uses: mpi4py/setup-mpi@v1
       with:
         mpi: ${{ matrix.mpi }}
 
-    - if: ${{ matrix.mpi == 'mpich' && runner.os == 'Linux' }}
-      run: |
-        # /usr/lib/$(arch)-linux-gnu/libmpi.so.12
-        test -f /usr/lib/$(arch)-linux-gnu/libmpi.so.12 || \
-        sudo ln -sr /usr/lib/$(arch)-linux-gnu/libmpi{ch,}.so.12
-
-    - uses: ./.github/actions/mpi4py-test-basic
+    - name: Test mpi4py with system MPI
+      run: .cibw/run-tests-mpi.sh
       timeout-minutes: 2
 
-    - if: ${{ matrix.mpi == 'mpich' || matrix.mpi == 'openmpi' }}
-      uses: ./.github/actions/mpi4py-test-basic
+    - name: Test setenv MPI4PY_MPIABI=${{ matrix.mpi }}
+      run: .cibw/run-tests-mpi.sh
       timeout-minutes: 2
       env:
-        MPI4PY_MPIABI: mpi31-${{ matrix.mpi }}
+        MPI4PY_MPIABI: ${{ matrix.mpi }}

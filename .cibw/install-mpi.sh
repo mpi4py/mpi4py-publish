@@ -1,43 +1,28 @@
 #!/bin/bash
 set -euo pipefail
 
-MPI_ABI=${1:-mpi31-mpich}
+MPI_ABI=${1:-mpich}
 MACHINE=${PROCESSOR_ARCHITECTURE:-$(uname -m)}
 MPIARCH=${2:-$MACHINE}
 MPIARCH=${MPIARCH/native/$MACHINE}
 
 MPI_CHANNEL=conda-forge
-MPI_PACKAGE=${MPI_ABI#*-}
-MPI_VERSION="*.*"
-case "$(uname)"-"$MPIARCH"-"$MPI_ABI" in
-# Linux x86_64/aarch64
-Linux-*-mpi41-mpich)         MPI_VERSION=4.2;; # >= 4.2
-Linux-*-mpi40-mpich)         MPI_VERSION=4.1;; # >= 4.0
-Linux-*-mpi31-mpich)         MPI_VERSION=3.4;; # >= 3.2
-Linux-*-mpi31-openmpi)       MPI_VERSION=4.1;; # >= 3.1
-# Darwin x86_64
-Darwin-x86_64-mpi41-mpich)   MPI_VERSION=4.2;;
-Darwin-x86_64-mpi40-mpich)   MPI_VERSION=4.0;;
-Darwin-x86_64-mpi31-mpich)   MPI_VERSION=3.2;;
-Darwin-x86_64-mpi31-openmpi) MPI_VERSION=3.1;;
-# Darwin arm64
-Darwin-arm64-mpi41-mpich)    MPI_VERSION=4.2;;
-Darwin-arm64-mpi40-mpich)    MPI_VERSION=4.0;;
-Darwin-arm64-mpi31-mpich)    MPI_VERSION=3.4;;
-Darwin-arm64-mpi31-openmpi)  MPI_VERSION=4.0;;
-# Windows AMD64
-*NT*-AMD64-mpi20-msmpi)
-    MPI_CHANNEL=conda-forge
-    MPI_PACKAGE=msmpi
-    MPI_VERSION=10.1.1
-    MPI_ROOT=${MPI_ROOT:-~/mpi}
-    ;;
-*NT*-AMD64-mpi31-impi)
-    MPI_CHANNEL=conda-forge
-    MPI_PACKAGE=impi-devel
-    MPI_VERSION=2021.14.0
-    MPI_ROOT=${MPI_ROOT:-~/mpi}
-    ;;
+MPI_PACKAGE=${MPI_ABI}
+case "$MPI_ABI" in
+    mpich)   MPI_VERSION=4 ;;
+    openmpi) MPI_VERSION=5 ;;
+    msmpi)   MPI_VERSION=10.1.1 ;;
+    impi)    MPI_VERSION=2021.14.0 MPI_PACKAGE=impi-devel ;;
+esac
+case "$(uname)" in
+    Linux|Darwin)
+        MPI_ROOT=${MPI_ROOT:-/usr/local}
+        sudo() { [ "$(id -u)" -eq 0 ] || set -- command sudo "$@"; "$@"; }
+        ;;
+    *NT*)
+        MPI_ROOT=${MPI_ROOT:-~/mpi}
+        sudo() { "$@"; }
+        ;;
 esac
 
 echo "Install Micromamba"
@@ -56,7 +41,7 @@ micromamba create --yes --always-copy \
            --prefix "$envdir" \
            --relocate-prefix "$MPI_ROOT" \
            "$MPI_PACKAGE"="$MPI_VERSION"
-test "$(uname)-$MPIARCH-$MPI_ABI" = "Linux-x86_64-mpi41-mpich" && \
+test "$(micromamba list --json --prefix "$envdir" attr)" != "[]" && \
 micromamba remove --yes --force --prefix "$envdir" attr
 micromamba list --prefix "$envdir"
 
@@ -73,16 +58,15 @@ if [ "$MPI_PACKAGE" == openmpi ]; then
     files=("$envdir"/share/openmpi/mpi{cc,c++,fort}-wrapper-data.txt)
     sed -i.orig -E 's/(compiler)=(.*)-(.*)/\1=\3/' "${files[@]}"
     sed -i.orig "s%-Wl,-rpath,$MPI_ROOT/lib%%g" "${files[@]}"
+    sed -i.orig "s%-Wl,-allow-shlib-undefined%%g" "${files[@]}"
+    sed -i.orig "s%-Wl,-rpath -Wl,\${libdir}%%g" "${files[@]}"
 fi
 
-echo
-# shellcheck disable=SC2015
-SUDO=$(test "$(id -u)" -ne 0 && command -v sudo || true)
 echo "Copying MPI to $MPI_ROOT"
-$SUDO mkdir -p "$MPI_ROOT"
-$SUDO cp -RP "$envdir"/. "$MPI_ROOT"
+sudo mkdir -p "$MPI_ROOT"
+sudo cp -RP "$envdir"/. "$MPI_ROOT"
 echo "Rebuild dynamic linker cache"
-$SUDO "$(command -v ldconfig || echo true)"
+sudo "$(command -v ldconfig || echo true)"
 
 echo "Display MPI information"
 if [ "$MPI_PACKAGE" == mpich   ]; then mpichversion; fi
@@ -107,7 +91,7 @@ if [ "$(uname)" == Darwin ] && [ "$MPIARCH" != "$MACHINE" ]; then
     libs=$(find "$envdir2/lib" -type f -name 'lib*.dylib')
     for lib in $libs; do
         lib=$(basename "$lib")
-        $SUDO lipo -create \
+        sudo lipo -create \
               "$envdir1/lib/$lib" \
               "$envdir2/lib/$lib" \
               -output "$MPI_ROOT/lib/$lib"

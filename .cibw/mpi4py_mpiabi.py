@@ -4,7 +4,6 @@
 import importlib.machinery
 import importlib.util
 import os
-import re
 import sys
 import warnings
 
@@ -196,88 +195,68 @@ def _get_mpiabi_from_libmpi(libmpi=None):
     # pylint: disable=import-outside-toplevel
     import ctypes as ct
     lib = _dlopen_libmpi(libmpi)
-    lib.MPI_Get_version.restype = ct.c_int
-    lib.MPI_Get_version.argtypes = [ct.POINTER(ct.c_int)] * 2
-    vmajor, vminor = ct.c_int(0), ct.c_int(0)
-    ierr = lib.MPI_Get_version(ct.byref(vmajor), ct.byref(vminor))
-    if ierr:  # pragma: no cover
-        message = f"MPI_Get_version [ierr={ierr}]"
-        raise RuntimeError(message)
-    vmajor, vminor = vmajor.value, vminor.value
+    abi_get_version = getattr(lib, "MPI_Abi_get_version", None)
+    if abi_get_version:
+        abi_get_version.restype = ct.c_int
+        abi_get_version.argtypes = [ct.POINTER(ct.c_int)] * 2
+        abi_major, abi_minor = ct.c_int(0), ct.c_int(0)
+        ierr = abi_get_version(ct.byref(abi_major), ct.byref(abi_minor))
+        if ierr:  # pragma: no cover
+            message = f"MPI_Abi_get_version [ierr={ierr}]"
+            raise RuntimeError(message)
+        if abi_major.value > 0:
+            return "mpiabi"
     if os.name == "posix":
         openmpi = hasattr(lib, "ompi_mpi_comm_self")
-        family = "openmpi" if openmpi else "mpich"
+        mpiabi = "openmpi" if openmpi else "mpich"
     else:
         msmpi = hasattr(lib, "MSMPI_Get_version")
-        family = "msmpi" if msmpi else "impi"
-    return (vmajor, vminor), family
+        mpiabi = "msmpi" if msmpi else "impi"
+    return mpiabi
 
 
-_pattern = re.compile(
-    r"""
-    \.? (
-    (mpi)? (\W|_)* (
-    (?P<vmajor>\d+) \.?
-    (?P<vminor>\d)
-    ) )? (\W|_)*
-    (?P<family>\w+)?
-    """,
-    re.VERBOSE | re.IGNORECASE,
-)
-_pattern_strict = re.compile(
-    r"mpi(?P<vmajor>\d+)(?P<vminor>\d)(-(?P<family>\w+))?",
-    re.VERBOSE | re.IGNORECASE,
-)
-
-
-def _get_mpiabi_from_string(string, strict=False):
-    pattern = _pattern_strict if strict else _pattern
-    match = pattern.match(string)
-    if match is None:
-        message = f"invalid MPI ABI string {string!r}"
-        raise RuntimeError(message)
-    vmajor = match.group("vmajor") or "4"
-    vminor = match.group("vminor") or "0"
-    family = match.group("family") or ""
-    return (int(vmajor), int(vminor)), family.lower() or None
+def _get_mpiabi_from_string(string):
+    table = {ord(c): "" for c in " -_"}
+    mpiabi = string.translate(table).lower()
+    if os.name == "posix":
+        if mpiabi == "impi":
+            mpiabi = "mpich"
+    else:
+        if mpiabi == "mpich":
+            mpiabi = "impi"
+    return mpiabi
 
 
 def _get_mpiabi():
-    version = getattr(_get_mpiabi, "version", None)
-    family = getattr(_get_mpiabi, "family", None)
-    if version is None:
-        string = os.environ.get("MPI4PY_MPIABI") or None
+    mpiabi = getattr(_get_mpiabi, "mpiabi", None)
+    if mpiabi is None:
+        mpiabi = os.environ.get("MPI4PY_MPIABI") or None
         libmpi = os.environ.get("MPI4PY_LIBMPI") or None
-        if string is not None:
-            version, family = _get_mpiabi_from_string(string)
+        if mpiabi is not None:
+            mpiabi = _get_mpiabi_from_string(mpiabi)
         else:
-            version, family = _get_mpiabi_from_libmpi(libmpi)
-        _get_mpiabi.version = version  # pyright: ignore
-        _get_mpiabi.family = family  # pyright: ignore
-    return version, family
+            mpiabi = _get_mpiabi_from_libmpi(libmpi)
+        _get_mpiabi.mpiabi = mpiabi  # pyright: ignore
+    return mpiabi
 
 
-_registry = {}  # type: dict[str, dict[str, list[tuple[int, int]]]]
+_registry = {}  # type: dict[str, list[str]]
 
 
 def _register(module, mpiabi):
-    version, family = _get_mpiabi_from_string(mpiabi, strict=True)
-    versions = _registry.setdefault(module, {}).setdefault(family, [])
-    versions.append(version)
-    versions.sort()
+    mpiabi = _get_mpiabi_from_string(mpiabi)
+    registered = _registry.setdefault(module, [])
+    if mpiabi not in registered:
+        registered.append(mpiabi)
 
 
 def _get_mpiabi_suffix(module):
     if module not in _registry:
         return None
-    version, family = _get_mpiabi()
-    versions = _registry[module].get(family)
-    if versions:
-        vmin, vmax = versions[0], versions[-1]
-        version = max(vmin, min(version, vmax))
-    vmajor, vminor = version
-    family_tag = f"-{family}" if family else ""
-    return f".mpi{vmajor}{vminor}{family_tag}"
+    mpiabi = _get_mpiabi()
+    if mpiabi not in _registry[module]:
+        return None
+    return f".{mpiabi}" if mpiabi else ""
 
 
 class _Finder:

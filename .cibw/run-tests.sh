@@ -20,5 +20,6 @@ set -x
 python --version
 python -m mpi4py --prefix
 python -m mpi4py --version
+python -m mpi4py --mpi-library
 python -m mpi4py --mpi-std-version
 python -m mpi4py --mpi-lib-version

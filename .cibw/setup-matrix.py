@@ -37,20 +37,12 @@ OS_ARCH_PY = {
 }
 
 MPI_ABI_POSIX = [
-    f"mpi{std}-{mpi}"
-    for std in (31, 40, 41)
-    for mpi in ("mpich", "openmpi")
-    if (std, mpi) not in (
-        (40, "openmpi"),
-        (41, "openmpi"),
-    )
+    "mpich",
+    "openmpi",
 ]
 MPI_ABI_WINNT = [
-    f"mpi{std}-{mpi}"
-    for std, mpi in (
-        (20, "msmpi"),
-        (31, "impi"),
-    )
+    "impi",
+    "msmpi",
 ]
 MPI_ABI = {
     "Linux": MPI_ABI_POSIX[:],
@@ -65,12 +57,12 @@ GHA_RUNNER = {
         None: "ubuntu-latest"
     },
     "macOS": {
-        "arm64": "macos-14",
+        "arm64": "macos-15",
         "x86_64": "macos-13",
         None: "macos-latest"
     },
     "Windows": {
-        "AMD64": "windows-2019",
+        "AMD64": "windows-2022",
         None: "windows-latest"
     },
 }
@@ -107,8 +99,10 @@ if opts.py and not set(opts.py) & {"*", "all"}:
 
 matrix_build = [
     {
-        "os": os, "arch": arch,
-        "py": py, "mpi-abi": mpi_abi,
+        "os": os,
+        "arch": arch,
+        "py": py,
+        "mpi-abi": mpi_abi,
         "runner": GHA_RUNNER[os][arch],
     }
     for os in os_arch_py
@@ -116,19 +110,41 @@ matrix_build = [
     for py in os_arch_py[os][arch]
     for mpi_abi in MPI_ABI[os]
 ]
+
 matrix_merge = [
     {
-        "os": os, "arch": arch,
+        "os": os,
+        "arch": arch,
         "runner": GHA_RUNNER[os][None],
     }
     for os in os_arch_py
     for arch in os_arch_py[os]
 ]
-os_arch_list = [
-    "{os}-{arch}".format(**row)
-    for row in matrix_merge
-]
+
+matrix_test = []
+for build in matrix_build:
+    os = build["os"]
+    arch = build["arch"]
+    pytag = build["py"]
+    mpi_abi = build["mpi-abi"]
+    runner = GHA_RUNNER[os][arch]
+    if pytag.startswith("pp"):
+        continue
+    pyver = pytag[2:3] + "." + pytag[3:]
+    mpilist = [mpi_abi]
+    if (os, arch, mpi_abi) == ("Linux", "x86_64", "mpich"):
+        mpilist.insert(0, "impi")
+    matrix_test += [
+        {
+            "mpi": mpi,
+            "py": pyver,
+            "os": os,
+            "arch": arch,
+            "runner": runner,
+        }
+        for mpi in mpilist
+    ]
 
 print(f"matrix-build={json.dumps(matrix_build)}")
 print(f"matrix-merge={json.dumps(matrix_merge)}")
-print(f"os-arch-list={json.dumps(os_arch_list)}")
+print(f"matrix-test={json.dumps(matrix_test)}")
