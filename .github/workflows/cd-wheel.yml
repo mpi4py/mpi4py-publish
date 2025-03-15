@@ -140,6 +140,7 @@ jobs:
         package-dir: mpi4py.git
         output-dir:  wheelhouse
       env:
+        MPI4PY_BUILD_ABI: "1"
         MPI4PY_LOCAL_VERSION: "${{ matrix.mpi-abi }}"
         CIBW_PROJECT_REQUIRES_PYTHON: ">=3.8"
         CIBW_BUILD_FRONTEND: "build[uv]"
@@ -154,8 +155,8 @@ jobs:
         CIBW_TEST_COMMAND: >-
           bash {project}/.cibw/run-tests.sh
         CIBW_ENVIRONMENT_PASS_LINUX: >-
+          MPI4PY_BUILD_ABI
           MPI4PY_LOCAL_VERSION
-          SOURCE_DATE_EPOCH
         CIBW_ENVIRONMENT_LINUX: >-
           CFLAGS="-g0 -Os"
         CIBW_ENVIRONMENT_MACOS: >-
