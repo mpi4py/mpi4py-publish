@@ -109,9 +109,10 @@ def _dlopen_libmpi(libmpi=None):  # noqa: C901
             suffix = ".dll"
         for subdir in (
             ("opt", "mpi", "libfabric", libdir),
-            (libdir, "libfabric"),
             ("libfabric", libdir),
-            ("libfabric"),
+            ("libfabric", ),
+            (libdir, "libfabric"),
+            (libdir, ),
         ):
             ofi_libdir = os.path.join(rootdir, *subdir)
             ofi_filename = os.path.join(ofi_libdir, f"libfabric{suffix}")
@@ -135,9 +136,9 @@ def _dlopen_libmpi(libmpi=None):  # noqa: C901
             return None
         if "FI_PROVIDER_PATH" not in os.environ:
             ofi_libdir = os.path.dirname(ofi_filename)
-            ofi_provider_path = os.path.join(ofi_libdir, "prov")
-            if os.path.isdir(ofi_provider_path):
-                os.environ["FI_PROVIDER_PATH"] = ofi_provider_path
+            ofi_prov = os.path.join(ofi_libdir, "prov")
+            ofi_path = ofi_prov if os.path.isdir(ofi_prov) else ofi_libdir
+            os.environ["FI_PROVIDER_PATH"] = ofi_path
         lib = ct.CDLL(ofi_filename, mode)
         _verbose_info(f"OFI library from {ofi_filename!r}")
         return lib
