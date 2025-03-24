@@ -134,7 +134,7 @@ jobs:
       run: ${{ runner.os == 'macOS' && 'brew' || 'choco' }} install uv
 
     - id: build
-      uses: pypa/cibuildwheel@v2.23.0
+      uses: pypa/cibuildwheel@v2.23.1
       timeout-minutes: 5
       with:
         package-dir: mpi4py.git
