@@ -1,2 +1,2 @@
 [codespell]
-skip = .git,.tox,.*_cache
+skip = .git,.tox,.*_cache,*.git
