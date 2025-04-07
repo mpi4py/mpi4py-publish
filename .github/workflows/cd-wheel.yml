@@ -171,8 +171,8 @@ jobs:
           MSMPI_BIN="$MSMPI_ROOT\\bin"
           MSMPI_INC="$MSMPI_ROOT\\include"
           MSMPI_LIB64="$MSMPI_ROOT\\lib"
-        CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
-        CIBW_MANYLINUX_X86_64_IMAGE:  manylinux_2_28
+        CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014
+        CIBW_MANYLINUX_X86_64_IMAGE:  manylinux2014
         CIBW_BEFORE_BUILD_WINDOWS:
 
     - id: upload
