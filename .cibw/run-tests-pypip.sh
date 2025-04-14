@@ -2,24 +2,24 @@
 # shellcheck disable=SC2034
 set -euo pipefail
 
-mpich=("4.3" "4.1" "3.4")
+mpich=("4.3" "4.2" "4.1" "4.0" "3.4")
 openmpi=("5.0" "4.1")
-impi=("2021.14.1" "2021.10.0")
-msmpi=("10.1.1")
+impi=("2021.15" "2021.10")
+msmpi=()
 
 mpi="$1"
 mpipackage="$mpi"
 mpiversion="${mpi}[@]"
 test "$mpi" = impi && mpipackage=impi_rt
 
-conda=$(command -v micromamba || command -v mamba || command -v conda)
-: "${CONDA_EXE=${MAMBA_EXE=${conda:-conda-not-found}}}"
+python=$(command -v python)
+: "${PYTHON=${python:-python-not-found}}"
 
 scriptdir=$(dirname "${BASH_SOURCE[0]}")
 for version in "${!mpiversion}"; do
     echo "::group::$mpipackage=$version"
-    "$CONDA_EXE" install -qy "$mpipackage=$version"
-    "$CONDA_EXE" list
+    "$PYTHON" -m pip install "$mpipackage==$version.*"
+    "$PYTHON" -m pip list
     "$scriptdir"/run-tests-mpi.sh
     echo "::endgroup::"
 done
