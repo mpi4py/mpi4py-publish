@@ -143,19 +143,24 @@ def _dlopen_libmpi(libmpi=None):  # noqa: C901
         _verbose_info(f"OFI library from {ofi_filename!r}")
         return lib
 
+    def libname(name, version=None):
+        suffix = f".{version}" if version is not None else ""
+        if sys.platform == "darwin":
+            template = "lib{}{}.dylib"
+        elif os.name == "posix":
+            template = "lib{}.so{}"
+        else:
+            template = "{}.dll"
+        return template.format(name, suffix)
+
     def libmpi_names():
         if os.name == "posix":
-            if sys.platform == "darwin":
-                libmpi = "libmpi{0}.dylib"
-            else:
-                libmpi = "libmpi.so{0}"
-            yield libmpi.format("")
-            versions = (12, 40, 20)
-            for version in versions:
-                yield libmpi.format(f".{version}")
+            yield libname("mpi")
+            yield libname("mpi", 12)  # mpich
+            yield libname("mpi", 40)  # openmpi
         else:
-            yield "impi.dll"
-            yield "msmpi.dll"
+            yield libname("impi")
+            yield libname("msmpi")
 
     def libmpi_paths(path):
         rpath = "@rpath" if sys.platform == "darwin" else ""
