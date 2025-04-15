@@ -4,7 +4,7 @@ set -euo pipefail
 
 mpich=("4.3" "4.1" "3.4")
 openmpi=("5.0" "4.1")
-impi=("2021.14.1" "2021.10.0")
+impi=("2021.15.0" "2021.10.0")
 msmpi=("10.1.1")
 
 mpi="$1"
@@ -20,6 +20,6 @@ for version in "${!mpiversion}"; do
     echo "::group::$mpipackage=$version"
     "$CONDA_EXE" install -qy "$mpipackage=$version"
     "$CONDA_EXE" list
-    "$scriptdir"/run-tests-mpi.sh
+    "$CONDA_EXE" run bash "$scriptdir"/run-tests-mpi.sh
     echo "::endgroup::"
 done
