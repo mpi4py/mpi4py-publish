@@ -79,6 +79,7 @@ jobs:
       matrix-test:  ${{ steps.setup.outputs.matrix-test  }}
     steps:
     - uses: step-security/harden-runner@v2
+      with: {egress-policy: audit}
     - uses: actions/checkout@v4
     - id: setup
       run: |
