@@ -1,6 +1,7 @@
 # Author:  Lisandro Dalcin
 # Contact: dalcinl@gmail.com
 """Support for MPI ABI."""
+
 import importlib.machinery
 import importlib.util
 import os
@@ -29,7 +30,7 @@ def _site_prefixes():
     return prefixes
 
 
-def _dlopen_rpath():  # noqa: C901
+def _dlopen_rpath():
     rpath = []
 
     def add_rpath(*directory):
@@ -53,9 +54,9 @@ def _dlopen_rpath():  # noqa: C901
     if os.name == "nt":
         impi_root = os.environ.get("I_MPI_ROOT")
         impi_library_kind = (
-            os.environ.get("I_MPI_LIBRARY_KIND") or
-            os.environ.get("library_kind") or
-            "release"
+            os.environ.get("I_MPI_LIBRARY_KIND")
+            or os.environ.get("library_kind")
+            or "release"
         )
         msmpi_bin = os.environ.get("MSMPI_BIN")
         if not msmpi_bin:
@@ -76,7 +77,7 @@ def _dlopen_rpath():  # noqa: C901
     return rpath
 
 
-def _dlopen_libmpi(libmpi=None):  # noqa: C901
+def _dlopen_libmpi(libmpi=None):
     # pylint: disable=too-many-statements
     # pylint: disable=import-outside-toplevel
     import ctypes as ct
@@ -110,9 +111,9 @@ def _dlopen_libmpi(libmpi=None):  # noqa: C901
         for subdir in (
             ("opt", "mpi", "libfabric", libdir),
             ("libfabric", libdir),
-            ("libfabric", ),
+            ("libfabric",),
             (libdir, "libfabric"),
-            (libdir, ),
+            (libdir,),
         ):
             ofi_libdir = os.path.join(rootdir, *subdir)
             ofi_filename = os.path.join(ofi_libdir, f"libfabric{suffix}")
@@ -121,12 +122,11 @@ def _dlopen_libmpi(libmpi=None):  # noqa: C901
         return None
 
     def dlopen_impi_libfabric(libdir):
-        ofi_internal = (
-            os.environ.get("I_MPI_OFI_LIBRARY_INTERNAL", "").lower()
-            in ("", "1", "y", "on", "yes", "true", "enable")
-        )
+        ofi_library_internal = os.environ.get(
+            "I_MPI_OFI_LIBRARY_INTERNAL", ""
+        ).lower() not in ("0", "no", "off", "false", "disable")
         ofi_required = os.environ.get("I_MPI_FABRICS") != "shm"
-        if not (ofi_internal and ofi_required):
+        if not (ofi_library_internal and ofi_required):
             return None
         rootdir = os.path.dirname(libdir)
         if os.path.basename(rootdir).lower() in ("release", "debug"):
@@ -200,6 +200,7 @@ _libmpi_rpath = []  # type: list[str]
 def _get_mpiabi_from_libmpi(libmpi=None):
     # pylint: disable=import-outside-toplevel
     import ctypes as ct
+
     lib = _dlopen_libmpi(libmpi)
     abi_get_version = getattr(lib, "MPI_Abi_get_version", None)
     if abi_get_version:
@@ -270,7 +271,7 @@ class _Finder:
 
     # pylint: disable=too-few-public-methods
     @classmethod
-    def find_spec(cls, fullname, path, target=None):
+    def find_spec(cls, fullname, path, target=None):  # noqa: ARG003
         """Find MPI ABI extension module spec."""
         # pylint: disable=unused-argument
         mpiabi_suffix = _get_mpiabi_suffix(fullname)
@@ -289,7 +290,8 @@ class _Finder:
                     return spec_from_file_location(fullname, location)
         warnings.warn(
             f"unsupported MPI ABI {mpiabi_suffix[1:]!r}",
-            category=RuntimeWarning, stacklevel=2,
+            category=RuntimeWarning,
+            stacklevel=2,
         )
         return None
 

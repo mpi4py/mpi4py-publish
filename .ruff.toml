@@ -1,4 +1,10 @@
-target-version = "py37"
+target-version = "py38"
+
+line-length = 79
+
+format.preview = true
+
+lint.preview = true
 
 lint.select = [
 "A",
@@ -13,17 +19,26 @@ lint.select = [
 "S",
 "W",
 "UP",
+"ARG",
 "ISC",
 "PIE",
 #"PTH",
+"PYI",
 "RET",
+"RSE",
 "RUF",
+"TID",
 "TRY",
 "YTT",
+"FURB",
 ]
 
 lint.ignore = [
+"C901",
 ]
+
+[lint.isort]
+combine-as-imports = true
 
 [lint.per-file-ignores]
 ".cibw/*" = ["D", "S101"]

@@ -5,7 +5,7 @@ from auditwheel.main import main
 
 if "repair" in sys.argv:
     sys.argv.append("--only-plat")
-    for name in ("mpi", ):
+    for name in ("mpi",):
         sys.argv.append("--exclude")
         sys.argv.append(f"lib{name}.so.*")
 

@@ -45,25 +45,25 @@ MPI_ABI_WINNT = [
     "msmpi",
 ]
 MPI_ABI = {
-    "Linux": MPI_ABI_POSIX[:],
-    "macOS": MPI_ABI_POSIX[:],
-    "Windows": MPI_ABI_WINNT[:],
+    "Linux": MPI_ABI_POSIX.copy(),
+    "macOS": MPI_ABI_POSIX.copy(),
+    "Windows": MPI_ABI_WINNT.copy(),
 }
 
 GHA_RUNNER = {
     "Linux": {
         "aarch64": "ubuntu-24.04-arm",
         "x86_64": "ubuntu-24.04",
-        None: "ubuntu-latest"
+        None: "ubuntu-latest",
     },
     "macOS": {
         "arm64": "macos-15",
         "x86_64": "macos-13",
-        None: "macos-latest"
+        None: "macos-latest",
     },
     "Windows": {
         "AMD64": "windows-2022",
-        None: "windows-latest"
+        None: "windows-latest",
     },
 }
 
@@ -86,7 +86,7 @@ if opts.os and not set(opts.os) & {"*", "all"}:
     os_arch_py = collections.defaultdict(dict)
     for os in select:
         for arch in select[os]:
-            os_arch_py[os][arch] = OS_ARCH_PY[os][arch][:]
+            os_arch_py[os][arch] = OS_ARCH_PY[os][arch].copy()
 if opts.py and not set(opts.py) & {"*", "all"}:
     for os in os_arch_py:
         for arch in os_arch_py[os]:

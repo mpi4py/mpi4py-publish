@@ -52,7 +52,7 @@ for whl in sorted(wheelhouse.glob("*.whl")):
     else:  # dist suffix
         package, sep, variant = dist.partition("_")
         variant = sep + variant
-    wheels[(package, version, (py, abi, plat))].append(variant)
+    wheels[package, version, (py, abi, plat)].append(variant)
 
 for (package, version, tags), variantlist in wheels.items():
     namever = f"{package}-{version}"
@@ -75,10 +75,8 @@ for (package, version, tags), variantlist in wheels.items():
 
         if i == 0:
             with WheelFile(wheelpath) as wf:
-                print(
-                    f"Unpacking wheel {wheelpath}...",
-                    end="", flush=True,
-                )
+                message = f"Unpacking wheel {wheelpath}..."
+                print(message, end="", flush=True)
                 for zinfo in wf.filelist:
                     zip_extract(wf, zinfo, root_dir)
                 print("OK", flush=True)
@@ -130,10 +128,8 @@ for (package, version, tags), variantlist in wheels.items():
                         extract.append(zinfo)
             for zinfo in extract:
                 member = Path(zinfo.filename)
-                print(
-                    f"Extracting: {member} [{variant}]...",
-                    end="", flush=True,
-                )
+                message = f"Extracting: {member} [{variant}]..."
+                print(message, end="", flush=True)
                 zip_extract(wf, zinfo, root_dir)
                 extension = root_dir.joinpath(member)
                 extname, suffix = extension.name.split(".", 1)
@@ -154,23 +150,27 @@ for (package, version, tags), variantlist in wheels.items():
 
     source = package_dir / "__init__.py"
     with source.open("a", encoding="utf-8") as fh:
-        fh.write(textwrap.dedent("""\n
+        fh.write(
+            textwrap.dedent("""\n
         # Install MPI ABI finder
         from . import _mpiabi  # noqa: E402
         _mpiabi._install_finder()
-        """))
+        """)
+        )
         if variant_registry:
             fh.write("# Register MPI ABI variants\n")
         for variant in variant_registry:
             for module in extensions:
                 fh.write(f"_mpiabi._register({module!r}, {variant!r})\n")
         if tags[-1].startswith("win"):
-            fh.write(textwrap.dedent("""\
+            fh.write(
+                textwrap.dedent("""\
             # Set Windows DLL search path
             __import__('_mpi_dll_path').install()
-            """))
+            """)
+            )
 
     output_dir.mkdir(parents=True, exist_ok=True)
     wheel_pack.pack(root_dir, output_dir, None)
     shutil.rmtree(working_dir, ignore_errors=True)
-    print("", flush=True)
+    print(flush=True)
