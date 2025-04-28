@@ -53,17 +53,14 @@ def _dlopen_rpath():
 
     if os.name == "nt":
         impi_root = os.environ.get("I_MPI_ROOT")
-        impi_library_kind = (
-            os.environ.get("I_MPI_LIBRARY_KIND")
-            or os.environ.get("library_kind")
-            or "release"
-        )
+        impi_library_kind = os.environ.get("I_MPI_LIBRARY_KIND") or "release"
         msmpi_bin = os.environ.get("MSMPI_BIN")
         if not msmpi_bin:
             msmpi_root = os.environ.get("MSMPI_ROOT")
             if msmpi_root:
                 msmpi_bin = os.path.join(msmpi_root, "bin")
         if impi_root:
+            add_rpath(impi_root, "bin", "mpi", impi_library_kind)
             add_rpath(impi_root, "bin", impi_library_kind)
             add_rpath(impi_root, "bin")
         if msmpi_bin:

@@ -503,3 +503,15 @@ jobs:
         env MPI4PY_LIBMPI="$libmpi" \
         .cibw/run-tests-mpi.sh
       timeout-minutes: 2
+
+    - if: ${{ matrix.os == 'Windows' && matrix.mpi == 'impi' }}
+      name: Test setenv I_MPI_LIBRARY_KIND=debug
+      run: .cibw/run-tests-mpi.sh
+      env: {I_MPI_LIBRARY_KIND: debug}
+      timeout-minutes: 2
+
+    - if: ${{ matrix.os == 'Windows' && matrix.mpi == 'impi' }}
+      name: Test setenv I_MPI_LIBRARY_KIND=release
+      run: .cibw/run-tests-mpi.sh
+      env: {I_MPI_LIBRARY_KIND: release}
+      timeout-minutes: 2
