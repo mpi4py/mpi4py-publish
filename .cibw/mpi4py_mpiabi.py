@@ -81,7 +81,7 @@ def _dlopen_libmpi(libmpi=None):
 
     mode = ct.DEFAULT_MODE
     if os.name == "posix":
-        mode = os.RTLD_NOW | os.RTLD_GLOBAL | os.RTLD_NODELETE
+        mode = os.RTLD_LAZY | os.RTLD_LOCAL
 
     def dlopen(name):
         _verbose_info(f"trying to dlopen {name!r}")
