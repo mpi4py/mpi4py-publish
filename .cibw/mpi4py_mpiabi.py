@@ -8,6 +8,9 @@ import os
 import sys
 import warnings
 
+_LIBMPI_PATH = []  # type: list[str]
+_LIBMPI_MODE = None  # type: int | None
+
 
 def _verbose_info(message, verbosity=1):
     if sys.flags.verbose >= verbosity:
@@ -74,16 +77,20 @@ def _dlopen_rpath():
     return rpath
 
 
+def _dlopen_mode():
+    if os.name == "posix":
+        return os.RTLD_LAZY | os.RTLD_LOCAL
+    return None
+
+
 def _dlopen_libmpi(libmpi=None):
     # pylint: disable=too-many-statements
     # pylint: disable=import-outside-toplevel
     import ctypes as ct
 
-    mode = ct.DEFAULT_MODE
-    if os.name == "posix":
-        mode = os.RTLD_LAZY | os.RTLD_LOCAL
-
-    def dlopen(name):
+    def dlopen(name, mode=None):
+        if mode is None:
+            mode = ct.DEFAULT_MODE
         _verbose_info(f"trying to dlopen {name!r}")
         lib = ct.CDLL(name, mode)
         _ = lib.MPI_Get_version
@@ -91,11 +98,11 @@ def _dlopen_libmpi(libmpi=None):
         if name is not None and sys.platform == "linux":
             if hasattr(lib, "I_MPI_Check_image_status"):
                 if os.path.basename(name) != name:
-                    dlopen_impi_libfabric(os.path.dirname(name))
+                    dlopen_impi_libfabric(os.path.dirname(name), mode)
         if name is not None and os.name == "nt":
             if os.path.basename(name).lower() == "impi.dll":
                 if os.path.basename(name) != name:
-                    dlopen_impi_libfabric(os.path.dirname(name))
+                    dlopen_impi_libfabric(os.path.dirname(name), mode)
         return lib
 
     def search_impi_libfabric(rootdir):
@@ -118,7 +125,7 @@ def _dlopen_libmpi(libmpi=None):
                 return ofi_filename
         return None
 
-    def dlopen_impi_libfabric(libdir):
+    def dlopen_impi_libfabric(libdir, mode):
         ofi_library_internal = os.environ.get(
             "I_MPI_OFI_LIBRARY_INTERNAL", ""
         ).lower() not in ("0", "no", "off", "false", "disable")
@@ -179,19 +186,20 @@ def _dlopen_libmpi(libmpi=None):
     if libmpi is not None:
         path = libmpi.split(os.pathsep)
     else:
-        path = _libmpi_rpath or _dlopen_rpath() or [""]
+        path = _LIBMPI_PATH or _dlopen_rpath() or [""]
+    if _LIBMPI_MODE is not None:
+        mode = _LIBMPI_MODE
+    else:
+        mode = _dlopen_mode()
     errors = ["cannot load MPI library"]
     for filename in libmpi_paths(path):
         try:
-            return dlopen(filename)
+            return dlopen(filename, mode)
         except OSError as exc:
             errors.append(str(exc))
         except AttributeError as exc:
             errors.append(str(exc))
     raise RuntimeError("\n".join(errors))
-
-
-_libmpi_rpath = []  # type: list[str]
 
 
 def _get_mpiabi_from_libmpi(libmpi=None):
