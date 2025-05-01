@@ -78,6 +78,10 @@ def _dlopen_rpath():
 
 
 def _dlopen_mode():
+    if sys.platform == "linux":
+        return os.RTLD_LAZY | os.RTLD_LOCAL
+    if sys.platform == "darwin":
+        return os.RTLD_LAZY | os.RTLD_GLOBAL
     if os.name == "posix":
         return os.RTLD_LAZY | os.RTLD_LOCAL
     return None
