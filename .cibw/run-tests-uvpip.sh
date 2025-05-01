@@ -12,16 +12,16 @@ mpipackage="$mpi"
 mpiversion="${mpi}[@]"
 test "$mpi" = impi && mpipackage=impi_rt
 
-python=$(command -v python)
-: "${PYTHON=${python:-python-not-found}}"
+uv=$(command -v uv)
+: "${UV=${uv:-uv-not-found}}"
 
 scriptdir=$(dirname "${BASH_SOURCE[0]}")
-"$PYTHON" -m pip uninstall -qy "$mpipackage"
+"$UV" pip uninstall -q "$mpipackage"
 for version in "${!mpiversion}"; do
     echo "::group::$mpipackage=$version"
-    "$PYTHON" -m pip install "$mpipackage==$version.*"
-    "$PYTHON" -m pip list
-    "$scriptdir"/run-tests-mpi.sh
+    "$UV" pip install "$mpipackage==$version.*"
+    "$UV" pip list
+    "$UV" run bash "$scriptdir"/run-tests-mpi.sh
     echo "::endgroup::"
 done
-"$PYTHON" -m pip uninstall -qy "$mpipackage"
+"$UV" pip uninstall -q "$mpipackage"
