@@ -18,7 +18,7 @@ def cp3(y_min=8, y_max=13):
     return py("cp", 3, y_min, y_max)
 
 
-def pp3(y_min=8, y_max=10):
+def pp3(y_min=8, y_max=11):
     return py("pp", 3, y_min, y_max)
 
 
@@ -28,7 +28,7 @@ OS_ARCH_PY = {
         "x86_64": cp3() + pp3(),
     },
     "macOS": {
-        "arm64": cp3(),
+        "arm64": cp3() + pp3(),
         "x86_64": cp3() + pp3(),
     },
     "Windows": {
