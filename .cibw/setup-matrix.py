@@ -10,12 +10,13 @@ parser.add_argument("--py", nargs="*")
 opts = parser.parse_args()
 
 
-def py(py, x, y_min, y_max):
-    return [f"{py}{x}{y}" for y in range(y_min, y_max + 1)]
+def py(py, x, y_min, y_max, abi=""):
+    return [f"{py}{x}{y}{abi}" for y in range(y_min, y_max + 1)]
 
 
 def cp3(y_min=8, y_max=13):
-    return py("cp", 3, y_min, y_max)
+    cpt = py("cp", 3, max(y_min, 13), y_max, abi="t")
+    return py("cp", 3, y_min, y_max) + cpt
 
 
 def pp3(y_min=8, y_max=10):
