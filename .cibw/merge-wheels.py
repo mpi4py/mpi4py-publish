@@ -60,6 +60,9 @@ for (package, version, tags), variantlist in wheels.items():
     root_dir = working_dir / namever
     package_dir = root_dir / package.partition("_")[0]
     distinfo_dir = root_dir / f"{namever}.dist-info"
+    ext_suffix_glob = f".*{ext_suffix}"
+    if tags[1] == "abi3" and tags[2].startswith("win"):
+        ext_suffix_glob = f"{ext_suffix}"
 
     variant_registry = []
     for i, variant in enumerate(sorted(variantlist)):
@@ -85,7 +88,7 @@ for (package, version, tags), variantlist in wheels.items():
 
             for extension in extensions:
                 extpath = Path().joinpath(*extension.split("."))
-                for extfile in root_dir.glob(f"{extpath}.*{ext_suffix}"):
+                for extfile in root_dir.glob(f"{extpath}{ext_suffix_glob}"):
                     extfile.unlink()
 
             for libdir in (
@@ -124,7 +127,7 @@ for (package, version, tags), variantlist in wheels.items():
                 member = Path(zinfo.filename)
                 for extension in extensions:
                     extpath = Path().joinpath(*extension.split("."))
-                    if member.match(f"{extpath}.*{ext_suffix}"):
+                    if member.match(f"{extpath}{ext_suffix_glob}"):
                         extract.append(zinfo)
             for zinfo in extract:
                 member = Path(zinfo.filename)
@@ -142,7 +145,7 @@ for (package, version, tags), variantlist in wheels.items():
         pycode = source.read_text(encoding="utf-8")
         source = package_dir / f"_mpiabi.{py}"
         source.write_text(pycode, encoding="utf-8")
-    if tags[-1].startswith("win"):
+    if tags[2].startswith("win"):
         source = Path(__file__).parent / "mpi_dll_path.py"
         pycode = source.read_text(encoding="utf-8")
         source = package_dir.parent / "_mpi_dll_path.py"
@@ -162,7 +165,7 @@ for (package, version, tags), variantlist in wheels.items():
         for variant in variant_registry:
             for module in extensions:
                 fh.write(f"_mpiabi._register({module!r}, {variant!r})\n")
-        if tags[-1].startswith("win"):
+        if tags[2].startswith("win"):
             fh.write(
                 textwrap.dedent("""\
             # Set Windows DLL search path

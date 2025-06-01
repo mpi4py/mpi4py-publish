@@ -41,7 +41,7 @@ if [ "$(uname)" == Darwin ]; then
 fi
 
 if [[ "$(uname)" =~ NT ]]; then
-    mods=("$tempdir"/mpi4py*win*.dir/mpi4py/MPI.*.pyd)
+    mods=("$tempdir"/mpi4py*win*.dir/mpi4py/MPI*.pyd)
     for m in "${mods[@]}"; do cp "$m" "$m.dll"; done
     mods=("$tempdir"/mpi4py*win*.dir/mpi4py/MPI.*.dll)
     out="$(mktemp -d)"/dlldeps.txt

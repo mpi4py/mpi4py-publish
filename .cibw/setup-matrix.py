@@ -22,6 +22,10 @@ def pp3(y_min=8, y_max=11):
     return py("pp", 3, y_min, y_max)
 
 
+def abi3(y=10):
+    return cp3(y, y)[0]
+
+
 OS_ARCH_PY = {
     "Linux": {
         "aarch64": cp3() + pp3(),
@@ -95,14 +99,19 @@ if opts.py and not set(opts.py) & {"*", "all"}:
                 for xp in fnmatch.filter(os_arch_py[os][arch], pat):
                     if xp not in select:
                         select.append(xp)
+                if pat == "abi3":
+                    xp = f"{abi3()}-{abi3()}"
+                    if xp not in select:
+                        select.append(xp)
             os_arch_py[os][arch][:] = select
 
 matrix_build = [
     {
         "os": os,
         "arch": arch,
-        "py": py,
+        "py": py.partition("-")[0],
         "mpi-abi": mpi_abi,
+        "py-sabi": py.partition("-")[2],
         "runner": GHA_RUNNER[os][arch],
     }
     for os in os_arch_py
@@ -126,22 +135,29 @@ for build in matrix_build:
     os = build["os"]
     arch = build["arch"]
     pytag = build["py"]
-    mpi_abi = build["mpi-abi"]
-    runner = GHA_RUNNER[os][arch]
     if pytag.startswith("pp"):
         continue
-    pyver = pytag[2:3] + "." + pytag[3:]
+    mpi_abi = build["mpi-abi"]
+    py_sabi = build["py-sabi"]
+    runner = GHA_RUNNER[os][arch]
     mpilist = [mpi_abi]
     if (os, arch, mpi_abi) == ("Linux", "x86_64", "mpich"):
         mpilist.insert(0, "impi")
+    if py_sabi:
+        pyvmin = abi3()
+        pyvers = [py for py in cp3() if int(py[3:]) >= int(pyvmin[3:])]
+        pylist = [py[2:3] + "." + py[3:] for py in pyvers]
+    else:
+        pylist = [pytag[2:3] + "." + pytag[3:]]
     matrix_test += [
         {
             "mpi": mpi,
-            "py": pyver,
+            "py": py,
             "os": os,
             "arch": arch,
             "runner": runner,
         }
+        for py in pylist
         for mpi in mpilist
     ]
 
