@@ -18,10 +18,21 @@ on:  # yamllint disable-line rule:truthy
         default: ''
         required: false
         type: string
-      publish-anaconda:
-        description: "Publish to Anaconda"
-        default: false
+      publish-pypi:
+        description: 'Publish to PyPI'
+        required: false
         type: boolean
+        default: false
+      publish-testpypi:
+        description: 'Publish to TestPyPI'
+        required: false
+        type: boolean
+        default: false
+      publish-anaconda:
+        description: 'Publish to Anaconda'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
 
@@ -58,6 +69,106 @@ jobs:
       ref: ${{ inputs.ref }}
       os-arch: Windows
 
+  publish-pypi:
+    if: ${{ inputs.publish-pypi }}
+    runs-on: ubuntu-latest
+    needs:
+      - sdist
+      - wheel-Linux
+      - wheel-macOS
+      - wheel-Windows
+    environment:
+      name: pypi
+      url: https://pypi.org/project/mpi4py
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+
+    steps:
+
+    - uses: step-security/harden-runner@v2
+      with:
+        egress-policy: audit
+
+    - name: Download sdist artifact
+      uses: actions/download-artifact@v4
+      with:
+        path: dist
+        pattern: sdist
+        merge-multiple: true
+
+    - name: Download wheel artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: dist
+        pattern: wheel-*
+        merge-multiple: true
+
+    - name: Report sha256sum
+      run:  |
+        # Report sha256sum
+        echo '```'         >> "$GITHUB_STEP_SUMMARY"
+        sha256sum -b *.whl >> "$GITHUB_STEP_SUMMARY"
+        echo '```'         >> "$GITHUB_STEP_SUMMARY"
+      working-directory: dist
+
+    - name: Attest artifacts
+      uses: actions/attest-build-provenance@v2
+      with:
+        subject-path: dist/*
+
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+
+  publish-testpypi:
+    if: ${{ inputs.publish-testpypi }}
+    runs-on: ubuntu-latest
+    needs:
+      - sdist
+      - wheel-Linux
+      - wheel-macOS
+      - wheel-Windows
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/project/mpi4py
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+
+    - uses: step-security/harden-runner@v2
+      with:
+        egress-policy: audit
+
+    - name: Download sdist artifact
+      uses: actions/download-artifact@v4
+      with:
+        path: dist
+        pattern: sdist
+        merge-multiple: true
+
+    - name: Download wheel artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: dist
+        pattern: wheel-*
+        merge-multiple: true
+
+    - name: Report sha256sum
+      run:  |
+        # Report sha256sum
+        echo '```'         >> "$GITHUB_STEP_SUMMARY"
+        sha256sum -b *.whl >> "$GITHUB_STEP_SUMMARY"
+        echo '```'         >> "$GITHUB_STEP_SUMMARY"
+      working-directory: dist
+
+    - name: Publish to TestPyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
+
   publish-anaconda:
     if: |
       inputs.publish-anaconda ||
@@ -78,7 +189,7 @@ jobs:
       with:
         egress-policy: audit
 
-    - name: Download sdist artifacts
+    - name: Download sdist artifact
       uses: actions/download-artifact@v4
       with:
         path: dist
