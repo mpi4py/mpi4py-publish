@@ -8,8 +8,10 @@ import os
 import sys
 import warnings
 
-_LIBMPI_PATH = []  # type: list[str]
-_LIBMPI_MODE = None  # type: int | None
+MPIABI = None  # type: str | None
+LIBMPI = None  # type: str | None
+LIBMPI_PATH = []  # type: list[str]
+LIBMPI_MODE = None  # type: int | None
 
 
 def _verbose_info(message, verbosity=1):
@@ -190,9 +192,9 @@ def _dlopen_libmpi(libmpi=None):
     if libmpi is not None:
         path = libmpi.split(os.pathsep)
     else:
-        path = _LIBMPI_PATH or _dlopen_rpath() or [""]
-    if _LIBMPI_MODE is not None:
-        mode = _LIBMPI_MODE
+        path = LIBMPI_PATH or _dlopen_rpath() or [""]
+    if LIBMPI_MODE is not None:
+        mode = LIBMPI_MODE
     else:
         mode = _dlopen_mode()
     errors = ["cannot load MPI library"]
@@ -246,8 +248,8 @@ def _get_mpiabi_from_string(string):
 def _get_mpiabi():
     mpiabi = getattr(_get_mpiabi, "mpiabi", None)
     if mpiabi is None:
-        mpiabi = os.environ.get("MPI4PY_MPIABI") or None
-        libmpi = os.environ.get("MPI4PY_LIBMPI") or None
+        mpiabi = MPIABI or os.environ.get("MPI4PY_MPIABI")
+        libmpi = LIBMPI or os.environ.get("MPI4PY_LIBMPI")
         if mpiabi is not None:
             mpiabi = _get_mpiabi_from_string(mpiabi)
         else:
