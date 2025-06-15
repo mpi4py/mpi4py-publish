@@ -23,7 +23,7 @@ on:  # yamllint disable-line rule:truthy
         type: string
       python-tag:
         description: "CPython/PyPy tag ({cp,pp}3{7..13})"
-        default: 'cp*'
+        default: 'cp* abi3'
         required: false
         type: string
       skip-tag:
@@ -60,7 +60,7 @@ on:  # yamllint disable-line rule:truthy
           - Windows-AMD64
       python-tag:
         description: "CPython/PyPy tag ({cp,pp}3{8..13})"
-        default: 'cp*'
+        default: 'cp* abi3'
         required: false
         type: string
       skip-tag:
@@ -147,7 +147,7 @@ jobs:
         output-dir:  wheelhouse
       env:
         MPI4PY_BUILD_MPIABI: "1"
-        MPI4PY_BUILD_PYSABI: "${{ matrix.py-sabi }}"
+        MPI4PY_BUILD_PYSABI: "${{ matrix.py-sabi && matrix.py }}"
         MPI4PY_LOCAL_VERSION: "${{ matrix.mpi-abi }}"
         CIBW_PROJECT_REQUIRES_PYTHON: ">=3.8"
         CIBW_BUILD_FRONTEND: "build[uv]"
@@ -292,6 +292,9 @@ jobs:
         path: dist
         pattern: wheel-${{ runner.os }}-${{ matrix.arch }}
         merge-multiple: true
+
+    - if: ${{ matrix.py-sabi != '' }}
+      run: rm -f dist/mpi4py-*-cp3??-cp3??-*.whl
 
     # * test conda
 

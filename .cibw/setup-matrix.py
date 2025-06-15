@@ -100,7 +100,7 @@ if opts.py and not set(opts.py) & {"*", "all"}:
                     if xp not in select:
                         select.append(xp)
                 if pat == "abi3":
-                    xp = f"{abi3()}-{abi3()}"
+                    xp = f"{abi3()}-abi3"
                     if xp not in select:
                         select.append(xp)
             os_arch_py[os][arch][:] = select
@@ -110,8 +110,8 @@ matrix_build = [
         "os": os,
         "arch": arch,
         "py": py.partition("-")[0],
-        "mpi-abi": mpi_abi,
         "py-sabi": py.partition("-")[2],
+        "mpi-abi": mpi_abi,
         "runner": GHA_RUNNER[os][arch],
     }
     for os in os_arch_py
@@ -153,6 +153,7 @@ for build in matrix_build:
         {
             "mpi": mpi,
             "py": py,
+            "py-sabi": py_sabi,
             "os": os,
             "arch": arch,
             "runner": runner,
