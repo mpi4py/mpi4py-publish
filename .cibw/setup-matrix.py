@@ -10,33 +10,37 @@ parser.add_argument("--py", nargs="*")
 opts = parser.parse_args()
 
 
-def py(py, x, y_min, y_max):
-    return [f"{py}{x}{y}" for y in range(y_min, y_max + 1)]
+def py(py, x, y_min, y_max, abi=""):
+    return [f"{py}{x}{y}{abi}" for y in range(y_min, y_max + 1)]
 
 
 def cp3(y_min=8, y_max=13):
     return py("cp", 3, y_min, y_max)
 
 
-def pp3(y_min=8, y_max=11):
+def cp3t(y_min=13, y_max=13):
+    return py("cp", 3, y_min, y_max, abi="t")
+
+
+def abi3(y_min=10, y_max=10):
+    return py("cp", 3, y_min, y_max, abi="-abi3")
+
+
+def pp3(y_min=10, y_max=11):
     return py("pp", 3, y_min, y_max)
-
-
-def abi3(y=10):
-    return cp3(y, y)[0]
 
 
 OS_ARCH_PY = {
     "Linux": {
-        "aarch64": cp3() + pp3(),
-        "x86_64": cp3() + pp3(),
+        "aarch64": cp3() + cp3t() + abi3() + pp3(),
+        "x86_64": cp3() + cp3t() + abi3() + pp3(),
     },
     "macOS": {
-        "arm64": cp3() + pp3(),
-        "x86_64": cp3() + pp3(),
+        "arm64": cp3() + cp3t() + abi3() + pp3(),
+        "x86_64": cp3() + cp3t() + abi3() + pp3(),
     },
     "Windows": {
-        "AMD64": cp3() + pp3(),
+        "AMD64": cp3() + cp3t() + abi3() + pp3(),
     },
 }
 
@@ -99,8 +103,8 @@ if opts.py and not set(opts.py) & {"*", "all"}:
                 for xp in fnmatch.filter(os_arch_py[os][arch], pat):
                     if xp not in select:
                         select.append(xp)
-                if pat == "abi3":
-                    xp = f"{abi3()}-{abi3()}"
+            if "abi3" in opts.py:
+                for xp in abi3():
                     if xp not in select:
                         select.append(xp)
             os_arch_py[os][arch][:] = select
@@ -110,8 +114,8 @@ matrix_build = [
         "os": os,
         "arch": arch,
         "py": py.partition("-")[0],
-        "mpi-abi": mpi_abi,
         "py-sabi": py.partition("-")[2],
+        "mpi-abi": mpi_abi,
         "runner": GHA_RUNNER[os][arch],
     }
     for os in os_arch_py
@@ -144,8 +148,7 @@ for build in matrix_build:
     if (os, arch, mpi_abi) == ("Linux", "x86_64", "mpich"):
         mpilist.insert(0, "impi")
     if py_sabi:
-        pyvmin = abi3()
-        pyvers = [py for py in cp3() if int(py[3:]) >= int(pyvmin[3:])]
+        pyvers = [py for py in cp3() if int(py[3:]) >= int(pytag[3:])]
         pylist = [py[2:3] + "." + py[3:] for py in pyvers]
     else:
         pylist = [pytag[2:3] + "." + pytag[3:]]
@@ -153,6 +156,7 @@ for build in matrix_build:
         {
             "mpi": mpi,
             "py": py,
+            "py-sabi": py_sabi,
             "os": os,
             "arch": arch,
             "runner": runner,

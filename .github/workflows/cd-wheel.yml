@@ -147,9 +147,10 @@ jobs:
         output-dir:  wheelhouse
       env:
         MPI4PY_BUILD_MPIABI: "1"
-        MPI4PY_BUILD_PYSABI: "${{ matrix.py-sabi }}"
+        MPI4PY_BUILD_PYSABI: "${{ matrix.py-sabi && matrix.py }}"
         MPI4PY_LOCAL_VERSION: "${{ matrix.mpi-abi }}"
         CIBW_PROJECT_REQUIRES_PYTHON: ">=3.8"
+        CIBW_ENABLE: "cpython-freethreading pypy"
         CIBW_BUILD_FRONTEND: "build[uv]"
         CIBW_BUILD: "${{ matrix.py || '*' }}-*"
         CIBW_SKIP:  "${{ inputs.skip-tag }} *musllinux*"
@@ -293,7 +294,18 @@ jobs:
         pattern: wheel-${{ runner.os }}-${{ matrix.arch }}
         merge-multiple: true
 
+    - if: ${{ matrix.py-sabi != '' }}
+      run: rm -f dist/mpi4py-*-cp3*-cp3*-*.whl
+
     # * test conda
+
+    - id: conda-args
+      run: |
+        # conda-args
+        python="${{ matrix.py }}"
+        if [[ "$python" == *t ]]; then
+        python="${python%%t} python-freethreading"; fi
+        echo python="$python" >> "$GITHUB_OUTPUT"
 
     - uses: mamba-org/setup-micromamba@v2
       with:
@@ -302,7 +314,7 @@ jobs:
         environment-name: test
         create-args: >-
           ${{ matrix.mpi == 'impi' && 'impi_rt' || matrix.mpi }}
-          python=${{ matrix.py }}
+          python=${{ steps.conda-args.outputs.python }}
           pip
         condarc: |
           show_channel_urls: true
