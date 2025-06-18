@@ -23,11 +23,6 @@ on:  # yamllint disable-line rule:truthy
         type: string
       python-tag:
         description: "CPython/PyPy tag ({cp,pp}3{7..13})"
-        default: 'cp*'
-        required: false
-        type: string
-      skip-tag:
-        description: "Skip build tags"
         default: ''
         required: false
         type: string
@@ -60,11 +55,6 @@ on:  # yamllint disable-line rule:truthy
           - Windows-AMD64
       python-tag:
         description: "CPython/PyPy tag ({cp,pp}3{8..13})"
-        default: 'cp*'
-        required: false
-        type: string
-      skip-tag:
-        description: "Skip build tags"
         default: ''
         required: false
         type: string
@@ -152,9 +142,9 @@ jobs:
         CIBW_PROJECT_REQUIRES_PYTHON: ">=3.8"
         CIBW_ENABLE: "cpython-freethreading pypy"
         CIBW_BUILD_FRONTEND: "build[uv]"
-        CIBW_BUILD: "${{ matrix.py || '*' }}-*"
-        CIBW_SKIP:  "${{ inputs.skip-tag }} *musllinux*"
         CIBW_ARCHS: "${{ matrix.arch }}"
+        CIBW_BUILD: "${{ matrix.py }}-*"
+        CIBW_SKIP:  "*musllinux*"
         CIBW_BEFORE_ALL: >-
           bash {project}/.cibw/install-mpi.sh
           "${{ matrix.mpi-abi }}" "${{ matrix.arch }}"

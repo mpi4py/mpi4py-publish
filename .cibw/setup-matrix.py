@@ -32,15 +32,15 @@ def pp3(y_min=10, y_max=11):
 
 OS_ARCH_PY = {
     "Linux": {
-        "aarch64": cp3() + cp3t() + abi3() + pp3(),
-        "x86_64": cp3() + cp3t() + abi3() + pp3(),
+        "aarch64": cp3() + cp3t() + abi3(),
+        "x86_64": cp3() + cp3t() + abi3(),
     },
     "macOS": {
-        "arm64": cp3() + cp3t() + abi3() + pp3(),
-        "x86_64": cp3() + cp3t() + abi3() + pp3(),
+        "arm64": cp3() + cp3t() + abi3(),
+        "x86_64": cp3() + cp3t() + abi3(),
     },
     "Windows": {
-        "AMD64": cp3() + cp3t() + abi3() + pp3(),
+        "AMD64": cp3() + cp3t() + abi3(),
     },
 }
 
@@ -98,13 +98,14 @@ if opts.os and not set(opts.os) & {"*", "all"}:
 if opts.py and not set(opts.py) & {"*", "all"}:
     for os in os_arch_py:
         for arch in os_arch_py[os]:
+            xplist = os_arch_py[os][arch] + pp3()
             select = []
-            for pat in opts.py:
-                for xp in fnmatch.filter(os_arch_py[os][arch], pat):
-                    if xp not in select:
-                        select.append(xp)
             if "abi3" in opts.py:
                 for xp in abi3():
+                    if xp not in select:
+                        select.append(xp)
+            for pat in opts.py:
+                for xp in fnmatch.filter(xplist, pat):
                     if xp not in select:
                         select.append(xp)
             os_arch_py[os][arch][:] = select
