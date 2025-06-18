@@ -18,6 +18,11 @@ on:  # yamllint disable-line rule:truthy
         default: ''
         required: false
         type: string
+      python-tag:
+        description: "CPython/PyPy tag ({cp,pp}3{8..13})"
+        default: ''
+        required: false
+        type: string
       publish-pypi:
         description: 'Publish to PyPI'
         required: false
@@ -54,6 +59,7 @@ jobs:
       repository: ${{ inputs.repository }}
       ref: ${{ inputs.ref }}
       os-arch: Linux
+      python-tag: ${{ inputs.python-tag }}
 
   wheel-macOS:
     uses: ./.github/workflows/cd-wheel.yml
@@ -61,6 +67,7 @@ jobs:
       repository: ${{ inputs.repository }}
       ref: ${{ inputs.ref }}
       os-arch: macOS
+      python-tag: ${{ inputs.python-tag }}
 
   wheel-Windows:
     uses: ./.github/workflows/cd-wheel.yml
@@ -68,6 +75,7 @@ jobs:
       repository: ${{ inputs.repository }}
       ref: ${{ inputs.ref }}
       os-arch: Windows
+      python-tag: ${{ inputs.python-tag }}
 
   publish-pypi:
     if: ${{ inputs.publish-pypi }}
@@ -91,7 +99,8 @@ jobs:
       with:
         egress-policy: audit
 
-    - name: Download sdist artifact
+    - if: ${{ (inputs.python-tag || '') == '' }}
+      name: Download sdist artifact
       uses: actions/download-artifact@v4
       with:
         path: dist
@@ -108,9 +117,9 @@ jobs:
     - name: Report sha256sum
       run:  |
         # Report sha256sum
-        echo '```'         >> "$GITHUB_STEP_SUMMARY"
-        sha256sum -b *.whl >> "$GITHUB_STEP_SUMMARY"
-        echo '```'         >> "$GITHUB_STEP_SUMMARY"
+        echo '```'     >> "$GITHUB_STEP_SUMMARY"
+        sha256sum -b * >> "$GITHUB_STEP_SUMMARY"
+        echo '```'     >> "$GITHUB_STEP_SUMMARY"
       working-directory: dist
 
     - name: Attest artifacts
@@ -142,7 +151,8 @@ jobs:
       with:
         egress-policy: audit
 
-    - name: Download sdist artifact
+    - if: ${{ (inputs.python-tag || '') == '' }}
+      name: Download sdist artifact
       uses: actions/download-artifact@v4
       with:
         path: dist
@@ -159,9 +169,9 @@ jobs:
     - name: Report sha256sum
       run:  |
         # Report sha256sum
-        echo '```'         >> "$GITHUB_STEP_SUMMARY"
-        sha256sum -b *.whl >> "$GITHUB_STEP_SUMMARY"
-        echo '```'         >> "$GITHUB_STEP_SUMMARY"
+        echo '```'     >> "$GITHUB_STEP_SUMMARY"
+        sha256sum -b * >> "$GITHUB_STEP_SUMMARY"
+        echo '```'     >> "$GITHUB_STEP_SUMMARY"
       working-directory: dist
 
     - name: Publish to TestPyPI
@@ -189,7 +199,8 @@ jobs:
       with:
         egress-policy: audit
 
-    - name: Download sdist artifact
+    - if: ${{ (inputs.python-tag || '') == '' }}
+      name: Download sdist artifact
       uses: actions/download-artifact@v4
       with:
         path: dist
@@ -206,10 +217,9 @@ jobs:
     - name: Report sha256sum
       run:  |
         # Report sha256sum
-        echo '```'            >> $GITHUB_STEP_SUMMARY
-        sha256sum -b *.tar.gz >> $GITHUB_STEP_SUMMARY
-        sha256sum -b *.whl    >> $GITHUB_STEP_SUMMARY
-        echo '```'            >> $GITHUB_STEP_SUMMARY
+        echo '```'     >> "$GITHUB_STEP_SUMMARY"
+        sha256sum -b * >> "$GITHUB_STEP_SUMMARY"
+        echo '```'     >> "$GITHUB_STEP_SUMMARY"
       working-directory: dist
 
     - name: Setup Micromamba
@@ -223,7 +233,7 @@ jobs:
         # https://pypi.anaconda.org/mpi4py/simple
         anaconda --token "$ANACONDA_TOKEN" \
         upload --user "$ANACONDA_USER" --force \
-        dist/*.tar.gz dist/*.whl
+        dist/*
       env:
         ANACONDA_USER:  mpi4py
         ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
