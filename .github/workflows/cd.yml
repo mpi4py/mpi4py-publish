@@ -41,12 +41,6 @@ on:  # yamllint disable-line rule:truthy
 
 jobs:
 
-  docs:
-    uses: ./.github/workflows/cd-docs.yml
-    with:
-      repository: ${{ inputs.repository }}
-      ref: ${{ inputs.ref }}
-
   sdist:
     uses: ./.github/workflows/cd-sdist.yml
     with:
