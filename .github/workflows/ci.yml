@@ -10,6 +10,12 @@ permissions:
 
 jobs:
 
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/setup-python@v5
+    - run: pipx run tox
+
   wheel-Linux:
     uses: ./.github/workflows/cd-wheel.yml
     with:
