@@ -131,7 +131,7 @@ jobs:
 
     - id: build
       uses: pypa/cibuildwheel@v3.0.0
-      timeout-minutes: 5
+      timeout-minutes: 10
       with:
         package-dir: mpi4py.git
         output-dir:  wheelhouse
