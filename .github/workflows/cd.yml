@@ -5,7 +5,7 @@ permissions:
 
 on:  # yamllint disable-line rule:truthy
   schedule:
-    - cron: '0 0 * * 0'
+    - cron: '30 0 * * 0'
   workflow_dispatch:
     inputs:
       repository:
