@@ -1,8 +1,5 @@
 name: cd
 
-permissions:
-  contents: read
-
 on:  # yamllint disable-line rule:truthy
   schedule:
     - cron: '30 0 * * 0'
@@ -38,6 +35,9 @@ on:  # yamllint disable-line rule:truthy
         required: false
         type: boolean
         default: false
+
+permissions:
+  contents: read
 
 jobs:
 
