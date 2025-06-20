@@ -22,7 +22,6 @@ def wheel_tagline(tags: list[str]) -> str:
     impls = sorted({tag.split("-")[0] for tag in tags})
     abivers = sorted({tag.split("-")[1] for tag in tags})
     platforms = sorted({tag.split("-")[2] for tag in tags})
-    platforms = [tag.split("-")[2] for tag in tags]
     return "-".join([".".join(impls), ".".join(abivers), ".".join(platforms)])
 
 
