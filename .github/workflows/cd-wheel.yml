@@ -137,7 +137,7 @@ jobs:
         output-dir:  wheelhouse
       env:
         MPI4PY_BUILD_MPIABI: "1"
-        MPI4PY_BUILD_PYSABI: "${{ matrix.py-sabi && matrix.py }}"
+        MPI4PY_BUILD_PYSABI: "${{ matrix.py-sabi && matrix.py || '0' }}"
         MPI4PY_LOCAL_VERSION: "${{ matrix.mpi-abi }}"
         CIBW_PROJECT_REQUIRES_PYTHON: ">=3.8"
         CIBW_ENABLE: "cpython-freethreading pypy"
