@@ -100,12 +100,12 @@ if opts.py and not set(opts.py) & {"*", "all"}:
         for arch in os_arch_py[os]:
             xplist = os_arch_py[os][arch] + pp3()
             select = []
-            if "abi3" in opts.py:
-                for xp in abi3():
-                    if xp not in select:
-                        select.append(xp)
             for pat in opts.py:
                 for xp in fnmatch.filter(xplist, pat):
+                    if xp not in select:
+                        select.append(xp)
+            if "abi3" in opts.py:
+                for xp in abi3():
                     if xp not in select:
                         select.append(xp)
             os_arch_py[os][arch][:] = select
