@@ -18,15 +18,6 @@ def zip_extract(zfile, zinfo, destination):
     destination.joinpath(zinfo.filename).chmod(permissions)
 
 
-def wheel_tagline(tags: list[str]) -> str:
-    impls = sorted({tag.split("-")[0] for tag in tags})
-    abivers = sorted({tag.split("-")[1] for tag in tags})
-    platforms = sorted({tag.split("-")[2] for tag in tags})
-    return "-".join([".".join(impls), ".".join(abivers), ".".join(platforms)])
-
-
-wheel_pack.compute_tagline = wheel_tagline
-
 parser = argparse.ArgumentParser()
 parser.add_argument("wheelhouse", nargs="?", default="wheelhouse")
 parser.add_argument("output_dir", nargs="?", default="dist")
